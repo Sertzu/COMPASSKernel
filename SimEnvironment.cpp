@@ -40,9 +40,35 @@ std::tuple<int, int, double> extract_values(const std::string& line) {
 
 SimEnvironment::SimEnvironment(std::string input, std::string output, double temp) : gen(rd())
 {
-	inputPath = input;
-	outputPath = output;
-	temperature = temp;
+    tlog = ThreadLogger(false);
+    threadnum = 0;
+    inputPath = input;
+    outputPath = output;
+    temperature = temp;
+    tlog << "[SimEnvironment] Setting up SimEnvironment!" << std::endl;
+    std::cout << "[SimEnvironment] Reading input file: " << input << std::endl;
+    auto lines = read_file_without_comments(inputPath);
+    std::cout << "[SimEnvironment] Read input file, converting data!" << std::endl;
+    for (int i = 0; i < lines.size(); i++)
+    {
+        auto values = extract_values(lines[i]);
+        if (std::get<0>(values) > links.size())
+            links.resize(std::get<0>(values));
+        links[std::get<0>(values) - 1].push_back(std::make_tuple(std::get<1>(values) - 1, std::get<2>(values) / 1000));
+    }
+    atomnum = links.size();
+    std::cout << "[SimEnvironment] Initializing magnetic moments!" << std::endl;
+    for (int i = 0; i < atomnum; i++)
+        magmoms.push_back(generate_random_vec());
+    std::cout << "[SimEnvironment] Setup complete!" << std::endl << std::endl;
+}
+
+SimEnvironment::SimEnvironment(std::string input, std::string output, double temp, unsigned int threadnumber) : gen(rd())
+{
+    threadnum = threadnumber;
+    inputPath = input;
+    outputPath = output;
+    temperature = temp;
     std::cout << "[SimEnvironment] Setting up SimEnvironment!" << std::endl;
     std::cout << "[SimEnvironment] Reading input file: " << input << std::endl;
     auto lines = read_file_without_comments(inputPath);
@@ -63,13 +89,16 @@ SimEnvironment::SimEnvironment(std::string input, std::string output, double tem
 
 void SimEnvironment::runSim(int steps, bool measurement)
 {
+    magmomsHistory.clear();
+    meanmagmomsHistory.clear();
+    energyHistory.clear();
     if (measurement)
         std::cout << "[Kernel] Starting MC simulation in measurement mode for " << steps << " steps!" << std::endl;
     else
         std::cout << "[Kernel] Starting MC simulation in equilib mode for " << steps << " steps!" << std::endl;
     for (int step = 1; step <= steps; step++)
     {
-        if (step % 100 == 0)
+        if (step % 1000 == 0)
         {
             if (measurement)
                 std::cout << "[Kernel] Currently at step " << step << " of " << steps << " in measurement mode!" << std::endl;
@@ -78,7 +107,7 @@ void SimEnvironment::runSim(int steps, bool measurement)
         }
         if (measurement)
         {
-            magmomsHistory.push_back(magmoms);
+            //magmomsHistory.push_back(magmoms);
             double M1 = 0.0;
             double M2 = 0.0;
             double M3 = 0.0;
@@ -92,6 +121,7 @@ void SimEnvironment::runSim(int steps, bool measurement)
             M2 /= atomnum;
             M3 /= atomnum;
             meanmagmomsHistory.push_back(std::sqrt(M1 * M1 + M2 * M2 + M3 * M3));
+            energyHistory.push_back(energy_calculator());
         }
 
         double diff;
@@ -101,7 +131,7 @@ void SimEnvironment::runSim(int steps, bool measurement)
         for (int i = 0; i < atomnum; i++)
         {
             auto randomVec = generate_random_vec();
-            diff = energy_calculator(i, magmoms[i], randomVec);
+            diff = energy_diff_calculator(i, magmoms[i], randomVec);
             rate = std::exp(-diff / (kB * temperature));
             if (ran(gen) < rate)
                 magmoms[i] = randomVec;
@@ -114,7 +144,17 @@ void SimEnvironment::runSim(int steps, bool measurement)
         std::cout << "[Kernel] Finished MC simulation in equilib mode!" << std::endl << std::endl;
 }
 
-double SimEnvironment::energy_calculator(int& index, std::vector<double>& oldMom, std::vector<double>& newMom)
+void SimEnvironment::setTemperature(double temp)
+{
+    temperature = temp;
+}
+
+std::string SimEnvironment::getOutputPath()
+{
+    return outputPath;
+}
+
+double SimEnvironment::energy_diff_calculator(int& index, std::vector<double>& oldMom, std::vector<double>& newMom)
 {
     double Hold = 0.0;
     double Hnew = 0.0;
@@ -129,6 +169,22 @@ double SimEnvironment::energy_calculator(int& index, std::vector<double>& oldMom
     }
 
     return Hnew - Hold;
+}
+
+double SimEnvironment::energy_calculator()
+{
+    double energy = 0.0;
+    int link;
+    double param;
+    for(int i = 0; i < atomnum; i++)
+        for (auto linkforatom : links[i])
+        {
+            link = std::get<0>(linkforatom);
+            param = std::get<1>(linkforatom);
+            energy -= dotProduct(magmoms[i], magmoms[link]) * param;
+        }
+
+    return energy / 2;
 }
 
 std::vector<double> SimEnvironment::generate_random_vec()
@@ -151,29 +207,43 @@ std::vector<double> SimEnvironment::generate_random_vec()
 
 std::vector<double> SimEnvironment::getParameters()
 {
-    double firstorder = 0.0;
-    double secondorder = 0.0;
-    double fourthorder = 0.0;
+    double magmomFirstorder = 0.0;
+    double magmomSecondorder = 0.0;
+    double magmomFourthorder = 0.0;
     for (double value : meanmagmomsHistory)
     {
-        firstorder += value;
-        secondorder += value * value;
-        fourthorder += value * value * value * value;
+        magmomFirstorder += value;
+        magmomSecondorder += value * value;
+        magmomFourthorder += value * value * value * value;
     }
-    firstorder /= meanmagmomsHistory.size();
-    secondorder /= meanmagmomsHistory.size();
-    fourthorder /= meanmagmomsHistory.size();
+    magmomFirstorder /= meanmagmomsHistory.size();
+    magmomSecondorder /= meanmagmomsHistory.size();
+    magmomFourthorder /= meanmagmomsHistory.size();
 
-    double MagMom = firstorder;
-    double Chi = atomnum / (kB * temperature) * (secondorder - firstorder * firstorder);
-    double U4 = 1 - fourthorder / (3 * secondorder * secondorder);
+    double energyFirstorder = 0.0;
+    double energySecondorder = 0.0;
+    for (double value : energyHistory)
+    {
+        energyFirstorder += value;
+        energySecondorder += value * value;
+    }
+    energyFirstorder /= energyHistory.size();
+    energySecondorder /= energyHistory.size();
+
+    double MagMom = magmomFirstorder;
+    double Chi = atomnum / (kB * temperature) * (magmomSecondorder - magmomFirstorder * magmomFirstorder);
+    double U4 = 1 - magmomFourthorder / (3 * magmomSecondorder * magmomSecondorder);
+    double E = energyFirstorder;
+    double HeatCapacity = atomnum * atomnum / (kB * temperature * temperature) * (magmomSecondorder - magmomFirstorder * magmomFirstorder);
 
     std::cout << "[SimEnvironment] Parameters are:" << std::endl;
     std::cout << "[SimEnvironment] Temperature: " << temperature << std::endl;
     std::cout << "[SimEnvironment] MagMom: " << MagMom << std::endl;
     std::cout << "[SimEnvironment] Chi: " << Chi << std::endl;
+    std::cout << "[SimEnvironment] Energy: " << E << std::endl;
+    std::cout << "[SimEnvironment] HeatCapacity: " << HeatCapacity << std::endl;
     std::cout << "[SimEnvironment] Kumulante of the fourth order: " << U4 << std::endl << std::endl;
 
-    std::vector<double> returnVals = { temperature,MagMom,Chi,U4 };
+    std::vector<double> returnVals = { temperature,MagMom,Chi,U4 ,E, HeatCapacity };
     return returnVals;
 }

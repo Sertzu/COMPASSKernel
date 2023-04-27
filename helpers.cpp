@@ -122,3 +122,51 @@ double dotProduct(const std::vector<double>& vec1, const std::vector<double>& ve
 
     return result;
 }
+
+void appendToFile(const std::string& filename, const std::string& data) {
+    std::ofstream file;
+
+    // Check if the file exists
+    bool fileExists = std::filesystem::exists(filename);
+
+    if (fileExists) {
+        // Open the file in append mode
+        file.open(filename, std::ios::app);
+    }
+    else {
+        // Create a new file and add the header
+        file.open(filename, std::ios::out);
+        file << "# Temp         M          Chi        U4         E     HeatCapacity\n";
+    }
+
+    // Append the string
+    file << data << '\n';
+
+    // Close the file
+    file.close();
+}
+
+std::string formatDouble(double value, int width, int precision) {
+    std::stringstream ss;
+    ss << std::fixed << std::setw(width) << std::setprecision(precision) << value;
+    return ss.str();
+}
+
+
+std::vector<double> generate_evenly_spaced_numbers(double a, double b, int n) {
+    std::vector<double> result;
+
+    if (n < 2) {
+        std::cerr << "Error: n should be at least 2." << std::endl;
+        return result;
+    }
+
+    double step = (b - a) / (n - 1);
+
+    for (int i = 0; i < n; ++i) {
+        double value = a + i * step;
+        result.push_back(value);
+    }
+
+    return result;
+}
