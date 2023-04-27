@@ -57,10 +57,10 @@ SimEnvironment::SimEnvironment(std::string input, std::string output, double tem
         links[std::get<0>(values) - 1].push_back(std::make_tuple(std::get<1>(values) - 1, std::get<2>(values) / 1000));
     }
     atomnum = links.size();
-    std::cout << "[SimEnvironment] Initializing magnetic moments!" << std::endl;
+    tlog << "[SimEnvironment] Initializing magnetic moments!" << std::endl;
     for (int i = 0; i < atomnum; i++)
         magmoms.push_back(generate_random_vec());
-    std::cout << "[SimEnvironment] Setup complete!" << std::endl << std::endl;
+    tlog << "[SimEnvironment] Setup complete!" << std::endl << std::endl;
 }
 
 SimEnvironment::SimEnvironment(std::string input, std::string output, double temp, unsigned int threadnumber) : gen(rd())
@@ -85,10 +85,10 @@ SimEnvironment::SimEnvironment(std::string input, std::string output, double tem
         links[std::get<0>(values) - 1].push_back(std::make_tuple(std::get<1>(values) - 1, std::get<2>(values) / 1000));
     }
     atomnum = links.size();
-    std::cout << "[SimEnvironment] Initializing magnetic moments!" << std::endl;
+    tlog << "[SimEnvironment] Initializing magnetic moments!" << std::endl;
     for (int i = 0; i < atomnum; i++)
         magmoms.push_back(generate_random_vec());
-    std::cout << "[SimEnvironment] Setup complete!" << std::endl << std::endl;
+    tlog << "[SimEnvironment] Setup complete!" << std::endl << std::endl;
 }
 
 void SimEnvironment::runSim(int steps, bool measurement)
