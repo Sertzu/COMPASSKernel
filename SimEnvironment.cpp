@@ -40,13 +40,13 @@ std::tuple<int, int, double> extract_values(const std::string& line) {
 
 SimEnvironment::SimEnvironment(std::string input, std::string output, double temp) : gen(rd())
 {
-    tlog = ThreadLogger(false);
     threadnum = 0;
+    tlog = ThreadLogger(threadnum, true);
     inputPath = input;
     outputPath = output;
     temperature = temp;
     tlog << "[SimEnvironment] Setting up SimEnvironment!" << std::endl;
-    std::cout << "[SimEnvironment] Reading input file: " << input << std::endl;
+    tlog << "[SimEnvironment] Reading input file: " << input << std::endl;
     auto lines = read_file_without_comments(inputPath);
     std::cout << "[SimEnvironment] Read input file, converting data!" << std::endl;
     for (int i = 0; i < lines.size(); i++)
@@ -66,11 +66,15 @@ SimEnvironment::SimEnvironment(std::string input, std::string output, double tem
 SimEnvironment::SimEnvironment(std::string input, std::string output, double temp, unsigned int threadnumber) : gen(rd())
 {
     threadnum = threadnumber;
+    if(threadnum)
+        tlog = ThreadLogger(threadnum, false);
+    else
+        tlog = ThreadLogger(threadnum, true);
     inputPath = input;
     outputPath = output;
     temperature = temp;
-    std::cout << "[SimEnvironment] Setting up SimEnvironment!" << std::endl;
-    std::cout << "[SimEnvironment] Reading input file: " << input << std::endl;
+    tlog << "[SimEnvironment] Setting up SimEnvironment!" << std::endl;
+    tlog << "[SimEnvironment] Reading input file: " << input << std::endl;
     auto lines = read_file_without_comments(inputPath);
     std::cout << "[SimEnvironment] Read input file, converting data!" << std::endl;
     for (int i = 0; i < lines.size(); i++)

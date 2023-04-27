@@ -16,10 +16,10 @@
 
 class ThreadLogger {
 public:
-    ThreadLogger(bool writeToConsole = false) : writeToConsole(writeToConsole) {
+    ThreadLogger(int threadnum = 0, bool writeToConsole = false) : writeToConsole(writeToConsole), threadnum(threadnum) {
         if (!writeToConsole) {
             std::ostringstream filename;
-            filename << "SimLog_" << std::this_thread::get_id() << ".txt";
+            filename << "SimLog_" << threadnum << ".txt";
             file.open(filename.str());
         }
     }
@@ -47,6 +47,7 @@ public:
     }
 
 private:
+    int threadnum;
     bool writeToConsole;
     std::ofstream file;
 };

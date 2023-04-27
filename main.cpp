@@ -18,7 +18,7 @@ int main(int argc, char* argv[])
     int equilibsteps, measuresteps;
     double mintemp = 200;
     double tempstep = 5;
-    bool multithreading = 0;
+    bool multithreading = 1;
     if(argc > 1)
     {
         if (read_args(argc, argv, inputPath, outputPath, temperature, equilibsteps, measuresteps))

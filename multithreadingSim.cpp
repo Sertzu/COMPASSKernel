@@ -12,7 +12,7 @@ void print_thread_id(int id)
 void run_sim_thread(unsigned int threadnum, std::string inputPath, std::string outputPath, double temp, int equilibsteps, int measuresteps)
 {
     std::unique_lock<std::mutex> lock(mtx);
-    SimEnvironment myEnvironment = SimEnvironment(inputPath, outputPath, temp);
+    SimEnvironment myEnvironment = SimEnvironment(inputPath, outputPath, temp, threadnum);
     myEnvironment.setTemperature(temp);
     lock.unlock();
 
