@@ -76,7 +76,7 @@ SimEnvironment::SimEnvironment(std::string input, std::string output, double tem
     tlog << "[SimEnvironment] Setting up SimEnvironment!" << std::endl;
     tlog << "[SimEnvironment] Reading input file: " << input << std::endl;
     auto lines = read_file_without_comments(inputPath);
-    std::cout << "[SimEnvironment] Read input file, converting data!" << std::endl;
+    tlog << "[SimEnvironment] Read input file, converting data!" << std::endl;
     for (int i = 0; i < lines.size(); i++)
     {
         auto values = extract_values(lines[i]);

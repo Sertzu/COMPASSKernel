@@ -34,8 +34,4 @@
 /results
 /inputs
 /.vs/COMPASSKernel
-*.sln
-*.vcxproj
-*.filters
 *.user
-/ThreadLogger.h
