@@ -27,6 +27,9 @@
     <ClCompile Include="multithreadingSim.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
+    <ClCompile Include="timeUtility.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="helpers.h">
@@ -36,6 +39,9 @@
       <Filter>Headerdateien</Filter>
     </ClInclude>
     <ClInclude Include="multithreadingSim.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="timeUtility.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
   </ItemGroup>

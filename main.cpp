@@ -5,6 +5,7 @@
 #include <sstream>
 
 #include "helpers.h"
+#include "timeUtility.h"
 #include "SimEnvironment.h"
 #include "multithreadingSim.h"
 
@@ -17,8 +18,9 @@ int main(int argc, char* argv[])
     double temperature;
     int equilibsteps, measuresteps;
     double mintemp = 200;
-    double tempstep = 5;
+    double tempstep = 20;
     bool multithreading = 1;
+    auto time = getCurrentTime();
     if(argc > 1)
     {
         if (read_args(argc, argv, inputPath, outputPath, temperature, equilibsteps, measuresteps))
@@ -30,14 +32,15 @@ int main(int argc, char* argv[])
     else
     {
         outputPath = "results";
-        inputPath = "C:\\Users\\Sertzu\\source\\repos\\COMPASSKernel\\COMPASSKernel\\inputs\\Jij_my_test.dat";
+        //inputPath = "inputs\\Jij_26_17_cor.dat";
+        inputPath = "inputs\\Jij_my_test_10.dat";
         temperature = 400;
         equilibsteps = 20000;
         measuresteps = 20000;
     }
-    SimEnvironment myEnvironment = SimEnvironment(inputPath, outputPath, temperature);
     if (argc > 1)
     {
+        SimEnvironment myEnvironment = SimEnvironment(inputPath, outputPath, temperature);
         myEnvironment.runSim(equilibsteps, 0);
         myEnvironment.runSim(measuresteps, 1);
         std::vector<double> outVals = myEnvironment.getParameters();
@@ -47,17 +50,18 @@ int main(int argc, char* argv[])
     }
     else if(!multithreading)
     {
+        SimEnvironment myEnvironment = SimEnvironment(inputPath, outputPath, temperature);
         while(temperature >= mintemp)
         {
             myEnvironment.setTemperature(temperature);
-            std::cout << "[Kernel] Doing calculation for temperature: " << temperature << "K" << std::endl;
+            std::cout << getCurrentTime().time_string << " [Kernel] Doing calculation for temperature: " << temperature << "K" << std::endl;
             myEnvironment.runSim(equilibsteps, 0);
             myEnvironment.runSim(measuresteps, 1);
             std::vector<double> outVals = myEnvironment.getParameters();
             std::string out = formatDouble(outVals[0], 9, 5) + "  " + formatDouble(outVals[1], 9, 5) + "  " + formatDouble(outVals[2], 9, 5) + "  " + formatDouble(outVals[3], 9, 5) + "  " + formatDouble(outVals[4], 9, 5) + "  " + formatDouble(outVals[5], 9, 5);
 
             appendToFile(outputPath + "\\results.dat", out);
-            std::cout << "[Kernel] Reducing temperature by " << tempstep << "K";
+            std::cout << getCurrentTime().time_string << " [Kernel] Reducing temperature by " << tempstep << "K";
             temperature -= tempstep;
             std::cout << " || New temperature is: " << temperature << "K" << std::endl;
         }
@@ -71,11 +75,9 @@ int main(int argc, char* argv[])
             temperature -= tempstep;
         }
         create_and_run_threads(inputPath, outputPath, tempVec, equilibsteps, measuresteps);
+        std::cout << getCurrentTime().time_string << " [Kernel] All threads finished. Sorting file: "  << outputPath + "\\results.dat" << std::endl;
+        sort_file_by_first_entry(outputPath + "\\results.dat");
     }
-
-    //SimEnvironment myEnvironment = SimEnvironment(inputPath, outputPath, temperature);
-    //myEnvironment.runSim(20000, 0);
-    //myEnvironment.runSim(60000, 1);
 
     return 0;
 }

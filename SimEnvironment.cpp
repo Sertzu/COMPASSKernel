@@ -45,10 +45,10 @@ SimEnvironment::SimEnvironment(std::string input, std::string output, double tem
     inputPath = input;
     outputPath = output;
     temperature = temp;
-    tlog << "[SimEnvironment] Setting up SimEnvironment!" << std::endl;
-    tlog << "[SimEnvironment] Reading input file: " << input << std::endl;
+    tlog << getCurrentTime().time_string <<  " [SimEnvironment] Setting up SimEnvironment!" << std::endl;
+    tlog << getCurrentTime().time_string << " [SimEnvironment] Reading input file: " << input << std::endl;
     auto lines = read_file_without_comments(inputPath);
-    std::cout << "[SimEnvironment] Read input file, converting data!" << std::endl;
+    tlog << getCurrentTime().time_string << " [SimEnvironment] Read input file, converting data!" << std::endl;
     for (int i = 0; i < lines.size(); i++)
     {
         auto values = extract_values(lines[i]);
@@ -57,10 +57,10 @@ SimEnvironment::SimEnvironment(std::string input, std::string output, double tem
         links[std::get<0>(values) - 1].push_back(std::make_tuple(std::get<1>(values) - 1, std::get<2>(values) / 1000));
     }
     atomnum = links.size();
-    tlog << "[SimEnvironment] Initializing magnetic moments!" << std::endl;
+    tlog << getCurrentTime().time_string << " [SimEnvironment] Initializing magnetic moments!" << std::endl;
     for (int i = 0; i < atomnum; i++)
         magmoms.push_back(generate_random_vec());
-    tlog << "[SimEnvironment] Setup complete!" << std::endl << std::endl;
+    tlog << getCurrentTime().time_string << " [SimEnvironment] Setup complete!" << std::endl << std::endl;
 }
 
 SimEnvironment::SimEnvironment(std::string input, std::string output, double temp, unsigned int threadnumber) : gen(rd())
@@ -73,10 +73,10 @@ SimEnvironment::SimEnvironment(std::string input, std::string output, double tem
     inputPath = input;
     outputPath = output;
     temperature = temp;
-    tlog << "[SimEnvironment] Setting up SimEnvironment!" << std::endl;
-    tlog << "[SimEnvironment] Reading input file: " << input << std::endl;
+    tlog << getCurrentTime().time_string << " [SimEnvironment] Setting up SimEnvironment!" << std::endl;
+    tlog << getCurrentTime().time_string << " [SimEnvironment] Reading input file: " << input << std::endl;
     auto lines = read_file_without_comments(inputPath);
-    tlog << "[SimEnvironment] Read input file, converting data!" << std::endl;
+    tlog << getCurrentTime().time_string << " [SimEnvironment] Read input file, converting data!" << std::endl;
     for (int i = 0; i < lines.size(); i++)
     {
         auto values = extract_values(lines[i]);
@@ -85,10 +85,10 @@ SimEnvironment::SimEnvironment(std::string input, std::string output, double tem
         links[std::get<0>(values) - 1].push_back(std::make_tuple(std::get<1>(values) - 1, std::get<2>(values) / 1000));
     }
     atomnum = links.size();
-    tlog << "[SimEnvironment] Initializing magnetic moments!" << std::endl;
+    tlog << getCurrentTime().time_string << " [SimEnvironment] Initializing magnetic moments!" << std::endl;
     for (int i = 0; i < atomnum; i++)
         magmoms.push_back(generate_random_vec());
-    tlog << "[SimEnvironment] Setup complete!" << std::endl << std::endl;
+    tlog << getCurrentTime().time_string << " [SimEnvironment] Setup complete!" << std::endl << std::endl;
 }
 
 void SimEnvironment::runSim(int steps, bool measurement)
@@ -97,17 +97,22 @@ void SimEnvironment::runSim(int steps, bool measurement)
     meanmagmomsHistory.clear();
     energyHistory.clear();
     if (measurement)
-        std::cout << "[Kernel] Starting MC simulation in measurement mode for " << steps << " steps!" << std::endl;
+        tlog << getCurrentTime().time_string << " [Kernel] Starting MC simulation in measurement mode for " << steps << " steps!" << std::endl;
     else
-        std::cout << "[Kernel] Starting MC simulation in equilib mode for " << steps << " steps!" << std::endl;
+        tlog << getCurrentTime().time_string << " [Kernel] Starting MC simulation in equilib mode for " << steps << " steps!" << std::endl;
+    auto lasttime = getCurrentTime();
     for (int step = 1; step <= steps; step++)
     {
-        if (step % 1000 == 0)
+        if (step % 100 == 0)
         {
+            auto currenttime = getCurrentTime();
             if (measurement)
-                std::cout << "[Kernel] Currently at step " << step << " of " << steps << " in measurement mode!" << std::endl;
+                tlog << getCurrentTime().time_string << " [Kernel] Currently at step " << step << " of " << steps << " in measurement mode. Last 100 steps took: " 
+                << currenttime.unix_time - lasttime.unix_time << " seconds!" << std::endl;
             else
-                std::cout << "[Kernel] Currently at step " << step << " / " << steps << " in equilib mode!" << std::endl;
+                tlog << getCurrentTime().time_string << " [Kernel] Currently at step " << step << " / " << steps << " in equilib mode. Last 100 steps took: " 
+                << currenttime.unix_time - lasttime.unix_time << " seconds!" << std::endl;
+            lasttime = currenttime;
         }
         if (measurement)
         {
@@ -143,9 +148,9 @@ void SimEnvironment::runSim(int steps, bool measurement)
 
     }
     if (measurement)
-        std::cout << "[Kernel] Finished MC simulation in measurement mode!" << std::endl << std::endl;
+        tlog << getCurrentTime().time_string << " [Kernel] Finished MC simulation in measurement mode!" << std::endl << std::endl;
     else
-        std::cout << "[Kernel] Finished MC simulation in equilib mode!" << std::endl << std::endl;
+        tlog << getCurrentTime().time_string << " [Kernel] Finished MC simulation in equilib mode!" << std::endl << std::endl;
 }
 
 void SimEnvironment::setTemperature(double temp)
@@ -228,8 +233,8 @@ std::vector<double> SimEnvironment::getParameters()
     double energySecondorder = 0.0;
     for (double value : energyHistory)
     {
-        energyFirstorder += value;
-        energySecondorder += value * value;
+        energyFirstorder += value / atomnum;
+        energySecondorder += value * value / (atomnum * atomnum);
     }
     energyFirstorder /= energyHistory.size();
     energySecondorder /= energyHistory.size();
@@ -238,15 +243,15 @@ std::vector<double> SimEnvironment::getParameters()
     double Chi = atomnum / (kB * temperature) * (magmomSecondorder - magmomFirstorder * magmomFirstorder);
     double U4 = 1 - magmomFourthorder / (3 * magmomSecondorder * magmomSecondorder);
     double E = energyFirstorder;
-    double HeatCapacity = atomnum * atomnum / (kB * temperature * temperature) * (magmomSecondorder - magmomFirstorder * magmomFirstorder);
+    double HeatCapacity = atomnum * atomnum / (kB * temperature * temperature) * (energySecondorder - energyFirstorder * energyFirstorder);
 
-    std::cout << "[SimEnvironment] Parameters are:" << std::endl;
-    std::cout << "[SimEnvironment] Temperature: " << temperature << std::endl;
-    std::cout << "[SimEnvironment] MagMom: " << MagMom << std::endl;
-    std::cout << "[SimEnvironment] Chi: " << Chi << std::endl;
-    std::cout << "[SimEnvironment] Energy: " << E << std::endl;
-    std::cout << "[SimEnvironment] HeatCapacity: " << HeatCapacity << std::endl;
-    std::cout << "[SimEnvironment] Kumulante of the fourth order: " << U4 << std::endl << std::endl;
+    tlog << getCurrentTime().time_string << " [SimEnvironment] Parameters are:" << std::endl;
+    tlog << getCurrentTime().time_string << " [SimEnvironment] Temperature: " << temperature << std::endl;
+    tlog << getCurrentTime().time_string << " [SimEnvironment] MagMom: " << MagMom << std::endl;
+    tlog << getCurrentTime().time_string << " [SimEnvironment] Chi: " << Chi << std::endl;
+    tlog << getCurrentTime().time_string << " [SimEnvironment] Energy: " << E << std::endl;
+    tlog << getCurrentTime().time_string << " [SimEnvironment] HeatCapacity: " << HeatCapacity << std::endl;
+    tlog << getCurrentTime().time_string << " [SimEnvironment] Kumulante of the fourth order: " << U4 << std::endl << std::endl;
 
     std::vector<double> returnVals = { temperature,MagMom,Chi,U4 ,E, HeatCapacity };
     return returnVals;

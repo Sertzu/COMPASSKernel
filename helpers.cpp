@@ -170,3 +170,57 @@ std::vector<double> generate_evenly_spaced_numbers(double a, double b, int n) {
 
     return result;
 }
+
+bool compare_lines(const std::pair<int, std::string>& a, const std::pair<int, std::string>& b) {
+    double val_a, val_b;
+    std::istringstream iss_a(a.second), iss_b(b.second);
+    iss_a >> val_a;
+    iss_b >> val_b;
+    return val_a < val_b;
+}
+
+void sort_file_by_first_entry(const std::string& filename) {
+    std::ifstream input_file(filename);
+    if (!input_file.is_open()) {
+        std::cerr << "Error opening file: " << filename << std::endl;
+        return;
+    }
+
+    std::vector<std::pair<int, std::string>> lines;
+    std::map<int, std::string> ignored_lines;
+    std::string line;
+    int line_number = 0;
+
+    while (std::getline(input_file, line)) {
+        if (!line.empty() && line[0] != '#') {
+            lines.push_back(std::make_pair(line_number, line));
+        }
+        else {
+            ignored_lines[line_number] = line;
+        }
+        ++line_number;
+    }
+
+    input_file.close();
+    std::sort(lines.begin(), lines.end(), compare_lines);
+
+    std::vector<std::string> sorted_lines(line_number);
+    for (const auto& ignored_line : ignored_lines) {
+        sorted_lines[ignored_line.first] = ignored_line.second;
+    }
+
+    for (const auto& valid_line : lines) {
+        auto pos = std::find_if(sorted_lines.begin(), sorted_lines.end(), [](const std::string& s) { return s.empty(); });
+        *pos = valid_line.second;
+    }
+
+    std::ofstream output_file(filename);
+    if (!output_file.is_open()) {
+        std::cerr << "Error opening file for writing: " << filename << std::endl;
+        return;
+    }
+
+    for (const std::string& line_to_write : sorted_lines) {
+        output_file << line_to_write << std::endl;
+    }
+}

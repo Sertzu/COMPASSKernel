@@ -2,18 +2,15 @@
 
 std::mutex mtx;
 
-void print_thread_id(int id)
-{
-    std::unique_lock<std::mutex> lock(mtx);
-    std::cout << "Thread ID: " << id << std::endl;
-    lock.unlock();
-}
 
 void run_sim_thread(unsigned int threadnum, std::string inputPath, std::string outputPath, double temp, int equilibsteps, int measuresteps)
 {
     std::unique_lock<std::mutex> lock(mtx);
+    std::cout << getCurrentTime().time_string << " [Thread Handler] Setup started for thread: " << threadnum << std::endl;
     SimEnvironment myEnvironment = SimEnvironment(inputPath, outputPath, temp, threadnum);
     myEnvironment.setTemperature(temp);
+    std::cout << getCurrentTime().time_string << " [Thread Handler] Setup finished for thread: " << threadnum << std::endl;
+    std::cout << getCurrentTime().time_string << " [Thread Handler] Starting simulation in thread:  " << threadnum << std::endl;
     lock.unlock();
 
     myEnvironment.runSim(equilibsteps, 0);
@@ -23,6 +20,7 @@ void run_sim_thread(unsigned int threadnum, std::string inputPath, std::string o
 
     lock.lock();
     appendToFile(myEnvironment.getOutputPath() + "\\results.dat", out);
+    std::cout << getCurrentTime().time_string << " [Thread Handler] Finished simulation in thread:  " << threadnum << std::endl;
     lock.unlock();
     
 }
@@ -32,10 +30,12 @@ void create_and_run_threads(std::string inputPath, std::string outputPath, std::
     std::vector<std::thread> threads;
 
     // Create and start threads
-    for (unsigned int i = 0; i < tempVec.size(); ++i) {
+    for (int i = tempVec.size() - 1; i >= 0; --i) {
         threads.emplace_back(run_sim_thread, i, inputPath, outputPath, tempVec[i], equilibsteps, measurementsteps);
     }
-
+    std::unique_lock<std::mutex> lock(mtx);
+    std::cout << getCurrentTime().time_string << " [Kernel] All threads started!" << std::endl;
+    lock.unlock();
     // Wait for all threads to finish
     for (auto& t : threads) {
         if (t.joinable()) {

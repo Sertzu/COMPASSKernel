@@ -108,6 +108,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <Profile>true</Profile>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -138,6 +139,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <Profile>true</Profile>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -145,11 +147,13 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="multithreadingSim.cpp" />
     <ClCompile Include="SimEnvironment.cpp" />
+    <ClCompile Include="timeUtility.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="helpers.h" />
     <ClInclude Include="multithreadingSim.h" />
     <ClInclude Include="SimEnvironment.h" />
+    <ClInclude Include="timeUtility.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
