@@ -18,7 +18,7 @@ int main(int argc, char* argv[])
     double temperature;
     int equilibsteps, measuresteps;
     double mintemp = 200;
-    double tempstep = 20;
+    double tempstep = 5;
     bool multithreading = 1;
     auto time = getCurrentTime();
     if(argc > 1)
