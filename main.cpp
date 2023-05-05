@@ -17,7 +17,7 @@ int main(int argc, char* argv[])
     std::string inputPath;
     double temperature;
     int equilibsteps, measuresteps;
-    double mintemp = 200;
+    double mintemp = 5;
     double tempstep = 5;
     bool multithreading = 1;
     auto time = getCurrentTime();
@@ -33,8 +33,9 @@ int main(int argc, char* argv[])
     {
         outputPath = "results";
         //inputPath = "inputs\\Jij_26_17_cor.dat";
-        inputPath = "inputs\\Jij_my_test_10.dat";
-        temperature = 400;
+        //inputPath = "inputs\\Jij_SrCoO3_b15_c17.dat";
+        inputPath = "inputs\\Jij_GdRu2Si2_b20_c24.04.dat";
+        temperature = 100;
         equilibsteps = 20000;
         measuresteps = 20000;
     }

@@ -224,3 +224,23 @@ void sort_file_by_first_entry(const std::string& filename) {
         output_file << line_to_write << std::endl;
     }
 }
+
+std::string joinPaths(const std::string& path1, const std::string& path2)
+{
+    std::string joinedPath = path1;
+
+    // Ensure the first path ends with a separator
+    if (joinedPath.back() != PATH_SEPARATOR) {
+        joinedPath += PATH_SEPARATOR;
+    }
+
+    // If the second path starts with a separator, remove it
+    if (path2.front() == PATH_SEPARATOR) {
+        joinedPath += path2.substr(1);
+    }
+    else {
+        joinedPath += path2;
+    }
+
+    return joinedPath;
+}
