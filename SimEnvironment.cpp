@@ -20,7 +20,7 @@ std::vector<std::string> read_file_without_comments(const std::string& file_path
     return lines;
 }
 
-std::tuple<int, int, double> extractLinks(const std::string& line) {
+std::tuple<int, int, double, bool, bool, bool> extractLinks(const std::string& line) {
     std::istringstream iss(line);
     int first, third;
     double last;
@@ -35,8 +35,21 @@ std::tuple<int, int, double> extractLinks(const std::string& line) {
     third = static_cast<int>(values[2]);
     last = values[8];
 
-    return std::make_tuple(first, third, last);
+    bool isNearestNeighbourX = false;
+    bool isNearestNeighbourY = false;
+    bool isNearestNeighbourZ = false;
+    if((abs(static_cast<int>(values[12])) + abs(static_cast<int>(values[13])) + abs(static_cast<int>(values[14]))) < 2)
+    {
+        if (abs(static_cast<int>(values[12])) == 1)
+            isNearestNeighbourX = true;
+        if (abs(static_cast<int>(values[13])) == 1)
+            isNearestNeighbourY = true;
+        if (abs(static_cast<int>(values[14])) == 1)
+            isNearestNeighbourZ = true;
+    }
+    return std::make_tuple(first, third, last, isNearestNeighbourX, isNearestNeighbourY, isNearestNeighbourZ);
 }
+
 
 std::tuple<int, std::vector<double>> extractCoordinates(const std::string& line)
 {
@@ -70,29 +83,36 @@ SimEnvironment::SimEnvironment(std::string input, std::string output, double tem
     auto lines = read_file_without_comments(inputPath);
     tlog << getCurrentTime().time_string << " [SimEnvironment] Read input file, converting data!" << std::endl;
 
+    atomnum = std::get<0>(extractLinks(lines.back()));
+    linksNN.resize(3);
+    links.resize(atomnum);
+    linksNN[0].resize(atomnum);
+    linksNN[1].resize(atomnum);
+    linksNN[2].resize(atomnum);
+    atomCoordinates.resize(atomnum);
+
     for (int i = 0; i < lines.size(); i++)
     {
         auto values = extractLinks(lines[i]);
         auto coords = extractCoordinates(lines[i]);
-        if (std::get<0>(values) > links.size())
+        links[std::get<0>(values) - 1].push_back(std::make_tuple(std::get<1>(values) - 1, std::get<2>(values)));
+        if(std::get<3>(values))
         {
-            links.resize(std::get<0>(values));
-            atomCoordinates.resize(std::get<0>(values));
+            linksNN[0][std::get<0>(values) - 1].push_back(std::get<1>(values) - 1);
         }
-        links[std::get<0>(values) - 1].push_back(std::make_tuple(std::get<1>(values) - 1, std::get<2>(values) / 1000));
-        // Check if the identifier is already in the vector
-        auto it = std::find_if(atomCoordinates.begin(), atomCoordinates.end(),
-            [&coords](const auto& elem) {
-                return std::get<0>(elem) == std::get<0>(coords);
-            });
+        if (std::get<4>(values))
+        {
+            linksNN[1][std::get<0>(values) - 1].push_back(std::get<1>(values) - 1);
+        }
+        if (std::get<5>(values))
+        {
+            linksNN[2][std::get<0>(values) - 1].push_back(std::get<1>(values) - 1);
+        }
 
-        // If the identifier is not found, add the tuple to the vector
-        if (it == atomCoordinates.end()) {
-            atomCoordinates[std::get<0>(coords) - 1] = coords;
-        }
+        atomCoordinates[std::get<0>(coords) - 1] = coords;
+
     }
-
-    atomnum = links.size();
+    interactionK = { 0.0, 0.0, 0.0 };
     tlog << getCurrentTime().time_string << " [SimEnvironment] Initializing magnetic moments!" << std::endl;
     for (int i = 0; i < atomnum; i++)
         magmoms.push_back(generate_random_vec());
@@ -113,27 +133,36 @@ SimEnvironment::SimEnvironment(std::string input, std::string output, double tem
     tlog << getCurrentTime().time_string << " [SimEnvironment] Reading input file: " << input << std::endl;
     auto lines = read_file_without_comments(inputPath);
     tlog << getCurrentTime().time_string << " [SimEnvironment] Read input file, converting data!" << std::endl;
+
+    atomnum = std::get<0>(extractLinks(lines.back()));
+    linksNN.resize(3);
+    links.resize(atomnum);
+    linksNN[0].resize(atomnum);
+    linksNN[1].resize(atomnum);
+    linksNN[2].resize(atomnum);
+    atomCoordinates.resize(atomnum);
+
     for (int i = 0; i < lines.size(); i++)
     {
         auto values = extractLinks(lines[i]);
         auto coords = extractCoordinates(lines[i]);
-        if (std::get<0>(values) > links.size())
+        links[std::get<0>(values) - 1].push_back(std::make_tuple(std::get<1>(values) - 1, std::get<2>(values)));
+        if (std::get<3>(values))
         {
-            links.resize(std::get<0>(values));
-            atomCoordinates.resize(std::get<0>(values));
+            linksNN[0][std::get<0>(values) - 1].push_back(std::get<1>(values) - 1);
         }
-        links[std::get<0>(values) - 1].push_back(std::make_tuple(std::get<1>(values) - 1, std::get<2>(values) / 1000));
-        // Check if the identifier is already in the vector
-        auto it = std::find_if(atomCoordinates.begin(), atomCoordinates.end(),
-            [&coords](const auto& elem) {
-                return std::get<0>(elem) == std::get<0>(coords);
-            });
+        if (std::get<4>(values))
+        {
+            linksNN[1][std::get<0>(values) - 1].push_back(std::get<1>(values) - 1);
+        }
+        if (std::get<5>(values))
+        {
+            linksNN[2][std::get<0>(values) - 1].push_back(std::get<1>(values) - 1);
+        }
 
-        // If the identifier is not found, add the tuple to the vector
-        if (it == atomCoordinates.end()) {
-            atomCoordinates[std::get<0>(coords) - 1] = coords;
-        }
+        atomCoordinates[std::get<0>(coords) - 1] = coords;
     }
+    interactionK = { 0.0, 0.0, 0.0 };
     atomnum = links.size();
     tlog << getCurrentTime().time_string << " [SimEnvironment] Initializing magnetic moments!" << std::endl;
     for (int i = 0; i < atomnum; i++)
@@ -141,7 +170,7 @@ SimEnvironment::SimEnvironment(std::string input, std::string output, double tem
     tlog << getCurrentTime().time_string << " [SimEnvironment] Setup complete!" << std::endl << std::endl;
 }
 
-SimEnvironment::SimEnvironment(std::string input, std::string output, double temp, unsigned int threadnumber, const std::vector<std::vector<std::tuple<int, double>>> &linksIn, const std::vector<std::tuple<int, std::vector<double>>>& atomCoordinatesIn)
+SimEnvironment::SimEnvironment(std::string input, std::string output, double temp, unsigned int threadnumber, const std::vector<std::vector<std::tuple<int, double>>> &linksIn, const std::vector<std::tuple<int, std::vector<double>>>& atomCoordinatesIn,const std::vector<std::vector<std::vector<int>>>& linksNNIn, std::vector<double> interactionKZIn, std::vector<double> interactionCIn, std::vector<std::vector<double>> magmomsIn, std::vector<double> magneticFieldHIn)
 {
     threadnum = threadnumber;
     if (threadnum)
@@ -154,11 +183,25 @@ SimEnvironment::SimEnvironment(std::string input, std::string output, double tem
     tlog << getCurrentTime().time_string << " [SimEnvironment] Setting up SimEnvironment!" << std::endl;
     tlog << getCurrentTime().time_string << " [SimEnvironment] Using links from reference!" << input << std::endl;
     links = linksIn;
+    linksNN = linksNNIn;
+    interactionK = interactionKZIn;
+    interactionC = interactionCIn;
+    magneticFieldH = magneticFieldHIn;
     atomCoordinates = atomCoordinatesIn;
     atomnum = links.size();
     tlog << getCurrentTime().time_string << " [SimEnvironment] Initializing magnetic moments!" << std::endl;
-    for (int i = 0; i < atomnum; i++)
-        magmoms.push_back(generate_random_vec());
+
+    if (magmomsIn.size() == 0)
+    {
+        for (int i = 0; i < atomnum; i++)
+            magmoms.push_back(generate_random_vec());
+    }
+    else
+        magmoms = magmomsIn;
+    if ((abs(interactionC[0]) + abs(interactionC[0]) + abs(interactionC[0])) < 1e-8)
+        enableCompassAnisotropy = true;
+    else
+        enableCompassAnisotropy = false;
     tlog << getCurrentTime().time_string << " [SimEnvironment] Setup complete!" << std::endl << std::endl;
 }
 
@@ -167,21 +210,42 @@ std::vector<std::vector<std::tuple<int, double>>> SimEnvironment::getLinks()
     return links;
 }
 
+std::vector<std::vector<std::vector<int>>> SimEnvironment::getLinksNN()
+{
+    return linksNN;
+}
+
 std::vector<std::tuple<int, std::vector<double>>> SimEnvironment::getAtomCoordinates()
 {
     return atomCoordinates;
 }
 
-void SimEnvironment::runSim(int steps, bool measurement)
+std::vector<std::vector<double>> SimEnvironment::getMagmoms()
+{
+    return magmoms;
+}
+
+void SimEnvironment::runSim(int steps, bool measurement, bool approach, double initialtemp)
 {
     magmomsHistory.clear();
     meanmagmomsHistory.clear();
     energyHistory.clear();
     if (measurement)
         tlog << getCurrentTime().time_string << " [Kernel] Starting MC simulation in measurement mode for " << steps << " steps!" << std::endl;
+    else if(approach)
+        tlog << getCurrentTime().time_string << " [Kernel] Starting MC simulation in approach mode for " << steps << " steps!" << std::endl;
     else
         tlog << getCurrentTime().time_string << " [Kernel] Starting MC simulation in equilib mode for " << steps << " steps!" << std::endl;
     auto lasttime = getCurrentTime();
+    double approachFactor;
+    double runningTemperature = temperature;
+    if (approach)
+    {
+        runningTemperature = initialtemp;
+        approachFactor = std::pow(temperature / initialtemp, 1.0 / steps);
+        tlog << getCurrentTime().time_string << " [Kernel] Initial temperature is " << initialtemp << "K and approachFactor is " << approachFactor << std::endl;
+    }
+
     for (int step = 1; step <= steps; step++)
     {
         if (step % 100 == 0)
@@ -190,8 +254,11 @@ void SimEnvironment::runSim(int steps, bool measurement)
             if (measurement)
                 tlog << getCurrentTime().time_string << " [Kernel] Currently at step " << step << " of " << steps << " in measurement mode. Last 100 steps took: " 
                 << currenttime.unix_time - lasttime.unix_time << " seconds!" << std::endl;
+            else if (approach)
+                tlog << getCurrentTime().time_string << " [Kernel] Currently at step " << step << " / " << steps << " in approach mode. Current temperature is " 
+                << runningTemperature << "K !" << std::endl;
             else
-                tlog << getCurrentTime().time_string << " [Kernel] Currently at step " << step << " / " << steps << " in equilib mode. Last 100 steps took: " 
+                tlog << getCurrentTime().time_string << " [Kernel] Currently at step " << step << " / " << steps << " in equilib mode. Last 100 steps took: "
                 << currenttime.unix_time - lasttime.unix_time << " seconds!" << std::endl;
             lasttime = currenttime;
         }
@@ -219,16 +286,16 @@ void SimEnvironment::runSim(int steps, bool measurement)
         double diff;
         double rate;
         std::uniform_real_distribution<> ran(0.0, 1.0);
-
         for (int i = 0; i < atomnum; i++)
         {
             auto randomVec = generate_random_vec();
             diff = energy_diff_calculator(i, magmoms[i], randomVec);
-            rate = std::exp(-diff / (kB * temperature));
+            rate = std::exp(-diff / (kB * runningTemperature));
             if (ran(gen) < rate)
                 magmoms[i] = randomVec;
         }
-
+        if (approach)
+            runningTemperature *= approachFactor;
     }
     if (measurement)
         tlog << getCurrentTime().time_string << " [Kernel] Finished MC simulation in measurement mode!" << std::endl << std::endl;
@@ -259,6 +326,23 @@ double SimEnvironment::energy_diff_calculator(int& index, std::vector<double>& o
         Hold -= dotProduct(oldMom, magmoms[link]) * param;
         Hnew -= dotProduct(newMom, magmoms[link]) * param;
     }
+    // Single Ion anisotropy + Zeeman Term
+    for (int i = 0; i < 3; i++)
+    {
+        Hold -= oldMom[i] * oldMom[i] * interactionK[i];
+        Hnew -= newMom[i] * newMom[i] * interactionK[i];
+
+        Hold -= oldMom[i] * magneticFieldH[i];
+        Hnew -= newMom[i] * magneticFieldH[i];
+    }
+    // Compass anisotropy
+    if(enableCompassAnisotropy)
+        for(int i = 0; i < 3; i++)
+            for (auto linkforatom : linksNN[i][index])
+            {
+                Hold -= oldMom[i] * magmoms[linkforatom][i] * interactionC[i];
+                Hnew -= newMom[i] * magmoms[linkforatom][i] * interactionC[i];
+            }
 
     return Hnew - Hold;
 }
@@ -336,14 +420,28 @@ std::vector<double> SimEnvironment::getParameters()
     tlog << getCurrentTime().time_string << " [SimEnvironment] HeatCapacity: " << HeatCapacity << std::endl;
     tlog << getCurrentTime().time_string << " [SimEnvironment] Kumulante of the fourth order: " << U4 << std::endl << std::endl;
 
-    std::vector<double> returnVals = { temperature,MagMom,Chi,U4 ,E, HeatCapacity };
+    auto magtotal = magneticFieldH[0] + magneticFieldH[1] + magneticFieldH[2];
+
+    std::vector<double> returnVals = { temperature, MagMom, Chi, U4, E, HeatCapacity, interactionK[2], magtotal };
     return returnVals;
 }
 
 void SimEnvironment::writeMagneticMomentsToFile()
 {
     // Open the output file
-    std::ofstream outFile(joinPaths(outputPath, "endMagmoms_temp" + std::to_string(temperature) + ".magres"));
+    std::ostringstream KString;
+    KString << std::scientific << std::setprecision(1) << interactionK[2];
+    std::string interactionKString = KString.str();
+
+    std::ostringstream CString;
+    CString << std::scientific << std::setprecision(1) << interactionC[0];
+    std::string interactionCString = CString.str();
+
+    std::ostringstream HString;
+    HString << std::scientific << std::setprecision(1) << magneticFieldH[0] + magneticFieldH[1] + magneticFieldH[2];
+    std::string magneticFieldHString = HString.str();
+
+    std::ofstream outFile(joinPaths(outputPath, "endMagmoms_temp" + std::to_string(temperature) + "_K" + interactionKString + "_C" + interactionCString + "_H" + magneticFieldHString + ".magres"));
     if (!outFile.is_open()) {
         std::cerr << "Failed to open the output file." << std::endl;
         return;

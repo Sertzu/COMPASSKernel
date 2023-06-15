@@ -18,6 +18,9 @@
 #define PATH_SEPARATOR '/'
 #endif
 
+std::vector<double> linspace(double start, double end, int num);
+std::vector<double> logspace(double start, double end, int num, double base = 10.0);
+
 double dotProduct(const std::vector<double>& vec1, const std::vector<double>& vec2);
 int read_args(int argc, char* argv[], std::string &input, std::string& output, double &temperature, int& equilibsteps, int& measuresteps);
 void appendToFile(const std::string& filename, const std::string& data);

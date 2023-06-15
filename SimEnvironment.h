@@ -5,6 +5,7 @@
 #include <fstream>
 #include <filesystem>
 #include <sstream>
+#include <iomanip>
 #include <tuple>
 #include <random>
 #include <cmath>
@@ -15,6 +16,7 @@
 
 #include <thread>
 #include <mutex>
+#include <wincrypt.h>
 
 class ThreadLogger {
 public:
@@ -61,12 +63,14 @@ class SimEnvironment
 public:
 	SimEnvironment(std::string inputPath, std::string outputPath, double temperature);
 	SimEnvironment(std::string inputPath, std::string outputPath, double temperature, unsigned int threadnum);
-    SimEnvironment(std::string inputPath, std::string outputPath, double temperature, unsigned int threadnum, const std::vector<std::vector<std::tuple<int, double>>> &links, const std::vector<std::tuple<int, std::vector<double>>>&atomCoordinates);
+    SimEnvironment(std::string inputPath, std::string outputPath, double temperature, unsigned int threadnum, const std::vector<std::vector<std::tuple<int, double>>>& links, const std::vector<std::tuple<int, std::vector<double>>>& atomCoordinates, const std::vector<std::vector<std::vector<int>>>& linksNN, std::vector<double> interactionKZ = { 0.0, 0.0, 0.0 }, std::vector<double> interactionC = { 0.0, 0.0, 0.0 }, std::vector<std::vector<double>> magmoms = {}, std::vector<double> magneticFieldHIn = { 0.0, 0.0, 0.0 });
 
     std::vector<std::vector<std::tuple<int, double>>> getLinks();
+    std::vector<std::vector<std::vector<int>>> getLinksNN();
     std::vector<std::tuple<int, std::vector<double>>> getAtomCoordinates();
+    std::vector<std::vector<double>> getMagmoms();
 
-	void runSim(int steps, bool measurement);
+	void runSim(int steps, bool measurement, bool approach = 0, double initialtemp = 300);
 	void setTemperature(double temp);
 
 	std::string getOutputPath();
@@ -83,6 +87,7 @@ private:
 	unsigned int threadnum;
 
 	std::vector<std::vector<std::tuple<int, double>>> links;
+    std::vector<std::vector<std::vector<int>>> linksNN;
 	std::vector<std::vector<double>> magmoms;
 	std::vector<std::vector<std::vector<double>>> magmomsHistory;
     std::vector<std::tuple<int, std::vector<double>>> atomCoordinates;
@@ -93,9 +98,13 @@ private:
 	std::string outputPath;
 	int atomnum;
 	double temperature;
+    bool enableCompassAnisotropy;
 
-	const double kB = 8.617330337217213e-05;
-    const int MAXMAGMOMHISTSIZE = 100;
+	const double kB = 8.617330337217213e-02; // meV/K
+    const int MAXMAGMOMHISTSIZE = 300;
+    std::vector<double> interactionK;
+    std::vector<double> interactionC;
+    std::vector<double> magneticFieldH;
 	std::random_device rd;
 	std::mt19937 gen;
 	

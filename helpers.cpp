@@ -15,6 +15,50 @@ static void show_usage(std::string name)
         << std::endl;
 }
 
+std::vector<double> linspace(double start, double end, int num) {
+    std::vector<double> linspaced;
+
+    if (num == 0) {
+        return linspaced;
+    }
+
+    if (num == 1) {
+        linspaced.push_back(start);
+        return linspaced;
+    }
+
+    double delta = (end - start) / (num - 1);
+
+    for (int i = 0; i < num - 1; ++i) {
+        linspaced.push_back(start + delta * i);
+    }
+    linspaced.push_back(end); // ensure that end is included
+
+    return linspaced;
+}
+
+std::vector<double> logspace(double start, double end, int num, double base)
+{
+    std::vector<double> logscaled;
+
+    if (num == 0) {
+        return logscaled;
+    }
+
+    if (num == 1) {
+        logscaled.push_back(std::pow(base, start));
+        return logscaled;
+    }
+
+    std::vector<double> linspace_vector = linspace(start, end, num);
+
+    for (double num : linspace_vector) {
+        logscaled.push_back(std::pow(base, num));
+    }
+
+    return logscaled;
+}
+
 int read_args(int argc, char* argv[], std::string& input, std::string& output, double& temperature, int& equilibsteps, int& measuresteps)
 {
     if (argc < 3) {
@@ -111,16 +155,7 @@ int read_args(int argc, char* argv[], std::string& input, std::string& output, d
 
 
 double dotProduct(const std::vector<double>& vec1, const std::vector<double>& vec2) {
-    if (vec1.size() != vec2.size() || vec1.size() != 3) {
-        throw std::invalid_argument("Both vectors must be of size 3.");
-    }
-
-    double result = 0.0;
-    for (size_t i = 0; i < vec1.size(); ++i) {
-        result += vec1[i] * vec2[i];
-    }
-
-    return result;
+    return vec1[0] * vec2[0] + vec1[1] * vec2[1] + vec1[2] * vec2[2];
 }
 
 void appendToFile(const std::string& filename, const std::string& data) {
@@ -136,7 +171,7 @@ void appendToFile(const std::string& filename, const std::string& data) {
     else {
         // Create a new file and add the header
         file.open(filename, std::ios::out);
-        file << "# Temp         M          Chi        U4         E     HeatCapacity\n";
+        file << "# Temp         M          Chi        U4         E     HeatCapacity       K        H\n";
     }
 
     // Append the string
