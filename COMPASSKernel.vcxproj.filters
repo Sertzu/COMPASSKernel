@@ -56,6 +56,9 @@
     <ClInclude Include="MomentReader.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
+    <ClInclude Include="BS_thread_pool.hpp">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="inputs\SETTINGS.cfg">

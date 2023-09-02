@@ -38,6 +38,7 @@ std::tuple<int, int, double, bool, bool, bool> extractLinks(const std::string& l
     bool isNearestNeighbourX = false;
     bool isNearestNeighbourY = false;
     bool isNearestNeighbourZ = false;
+    /*
     if((abs(static_cast<int>(values[12])) + abs(static_cast<int>(values[13])) + abs(static_cast<int>(values[14]))) < 2)
     {
         if (abs(static_cast<int>(values[12])) == 1)
@@ -47,6 +48,7 @@ std::tuple<int, int, double, bool, bool, bool> extractLinks(const std::string& l
         if (abs(static_cast<int>(values[14])) == 1)
             isNearestNeighbourZ = true;
     }
+    */
     return std::make_tuple(first, third, last, isNearestNeighbourX, isNearestNeighbourY, isNearestNeighbourZ);
 }
 
@@ -115,7 +117,7 @@ SimEnvironment::SimEnvironment(std::string input, std::string output, double tem
     interactionK = { 0.0, 0.0, 0.0 };
     tlog << getCurrentTime().time_string << " [SimEnvironment] Initializing magnetic moments!" << std::endl;
     for (int i = 0; i < atomnum; i++)
-        magmoms.push_back(generate_random_vec());
+        magmoms.push_back(generateRandomVecSingle());
     tlog << getCurrentTime().time_string << " [SimEnvironment] Setup complete!" << std::endl << std::endl;
 }
 
@@ -166,7 +168,7 @@ SimEnvironment::SimEnvironment(std::string input, std::string output, double tem
     atomnum = links.size();
     tlog << getCurrentTime().time_string << " [SimEnvironment] Initializing magnetic moments!" << std::endl;
     for (int i = 0; i < atomnum; i++)
-        magmoms.push_back(generate_random_vec());
+        magmoms.push_back(generateRandomVecSingle());
     tlog << getCurrentTime().time_string << " [SimEnvironment] Setup complete!" << std::endl << std::endl;
 }
 
@@ -194,7 +196,7 @@ SimEnvironment::SimEnvironment(std::string input, std::string output, double tem
     if (magmomsIn.size() == 0)
     {
         for (int i = 0; i < atomnum; i++)
-            magmoms.push_back(generate_random_vec());
+            magmoms.push_back(generateRandomVecSingle());
     }
     else
         magmoms = magmomsIn;
@@ -246,9 +248,14 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approach, double i
         tlog << getCurrentTime().time_string << " [Kernel] Initial temperature is " << initialtemp << "K and approachFactor is " << approachFactor << std::endl;
     }
 
+    std::vector<std::vector<double>> randomNumberVector3D(atomnum, { 0.0 ,0.0 , 0.0});
+    std::vector<double> rateVector(atomnum, 0.0);
+
+    BS::thread_pool pool;
+
     for (int step = 1; step <= steps; step++)
     {
-        if (step % 100 == 0)
+        if (step % 1000 == 0)
         {
             auto currenttime = getCurrentTime();
             if (measurement)
@@ -286,16 +293,45 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approach, double i
         double diff;
         double rate;
         std::uniform_real_distribution<> ran(0.0, 1.0);
+        double beta = 1 / (kB * runningTemperature);
+        generateRandomVecArray(randomNumberVector3D);
+        /*
+        //Normal Way
         for (int i = 0; i < atomnum; i++)
         {
-            auto randomVec = generate_random_vec();
-            diff = energy_diff_calculator(i, magmoms[i], randomVec);
-            rate = std::exp(-diff / (kB * runningTemperature));
+            diff = energy_diff_calculator(i, magmoms[i], randomNumberVector[i]);
+            rate = std::exp(-diff * beta);
             if (ran(gen) < rate)
-                magmoms[i] = randomVec;
+            {
+                magmoms[i] = randomNumberVector[i];
+            }
         }
+        */
+        
+        //Parallel Way
+        pool.push_loop(atomnum,
+            [&](const int a, const int b)
+            {
+                for (int i = a; i < b; ++i)
+                    rateVector[i] = rate_calculator(i, beta, magmoms[i], randomNumberVector3D[i]);
+            });
+
+        pool.wait_for_tasks();
+
+        pool.push_loop(atomnum,
+            [&](const int a, const int b)
+            {
+                for (int i = a; i < b; ++i)
+                    if (ran(gen) < rateVector[i])
+                    {
+                        magmoms[i] = randomNumberVector3D[i];
+                    }
+            });
+
+        pool.wait_for_tasks();
         if (approach)
             runningTemperature *= approachFactor;
+
     }
     if (measurement)
         tlog << getCurrentTime().time_string << " [Kernel] Finished MC simulation in measurement mode!" << std::endl << std::endl;
@@ -318,13 +354,15 @@ double SimEnvironment::energy_diff_calculator(int& index, std::vector<double>& o
     double Hold = 0.0;
     double Hnew = 0.0;
     int link;
-    double param;
+    double param, sum;
     for (auto linkforatom : links[index])
     {
         link = std::get<0>(linkforatom);
         param = std::get<1>(linkforatom);
-        Hold -= dotProduct(oldMom, magmoms[link]) * param;
-        Hnew -= dotProduct(newMom, magmoms[link]) * param;
+        dotProduct(sum, oldMom, magmoms[link]);
+        Hold -= sum * param;
+        dotProduct(sum, newMom, magmoms[link]);
+        Hnew -= sum * param;
     }
     // Single Ion anisotropy + Zeeman Term
     for (int i = 0; i < 3; i++)
@@ -347,23 +385,29 @@ double SimEnvironment::energy_diff_calculator(int& index, std::vector<double>& o
     return Hnew - Hold;
 }
 
+double SimEnvironment::rate_calculator(int& index, double& beta, std::vector<double>& oldMom, std::vector<double>& newMom)
+{
+    return std::exp(-energy_diff_calculator(index, oldMom, newMom) * beta);
+}
+
 double SimEnvironment::energy_calculator()
 {
     double energy = 0.0;
     int link;
-    double param;
+    double param, sum;
     for(int i = 0; i < atomnum; i++)
         for (auto linkforatom : links[i])
         {
             link = std::get<0>(linkforatom);
             param = std::get<1>(linkforatom);
-            energy -= dotProduct(magmoms[i], magmoms[link]) * param;
+            dotProduct(sum, magmoms[i], magmoms[link]);
+            energy -= sum * param;
         }
 
     return energy / 2;
 }
 
-std::vector<double> SimEnvironment::generate_random_vec()
+std::vector<double> SimEnvironment::generateRandomVecSingle()
 {
     double C1, C2, Csq;
 
@@ -376,9 +420,33 @@ std::vector<double> SimEnvironment::generate_random_vec()
         C2 = 1.0 - 2.0 * ran(gen);
         Csq = C1 * C1 + C2 * C2;
     }
-    std::vector<double> ranvec = { 2 * C1 * std::sqrt((1 - Csq)), 2 * C2 * std::sqrt((1 - Csq)), 1 - 2 * Csq };
+    double A, B, C;
+    A = 2 * C1 * std::sqrt((1 - Csq));
+    B = 2 * C2 * std::sqrt((1 - Csq));
+    C = 1 - 2 * Csq;
+    std::vector<double> ranvec = { A, B, C};
     return ranvec;
 
+}
+
+void SimEnvironment::generateRandomVecArray(std::vector<std::vector<double>>& vecIn)
+{
+    double C1, C2, Csq;
+
+    std::uniform_real_distribution<> ran(0.0, 1.0);
+    for (int i = 0; i < vecIn.size(); i++)
+    {
+        Csq = 2;
+        while (Csq >= 1)
+        {
+            C1 = 1.0 - 2.0 * ran(gen);
+            C2 = 1.0 - 2.0 * ran(gen);
+            Csq = C1 * C1 + C2 * C2;
+        }
+        vecIn[i][0] = 2 * C1 * std::sqrt((1 - Csq));
+        vecIn[i][1] = 2 * C2 * std::sqrt((1 - Csq));
+        vecIn[i][2] = 1 - 2 * Csq;
+    }
 }
 
 std::vector<double> SimEnvironment::getParameters()

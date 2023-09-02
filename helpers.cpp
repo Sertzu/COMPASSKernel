@@ -154,9 +154,10 @@ int read_args(int argc, char* argv[], std::string& input, std::string& output, d
 }
 
 
-double dotProduct(const std::vector<double>& vec1, const std::vector<double>& vec2) {
-    return vec1[0] * vec2[0] + vec1[1] * vec2[1] + vec1[2] * vec2[2];
+void dotProduct(double &sum, const std::vector<double>& vec1, const std::vector<double>& vec2) {
+    sum = vec1[0] * vec2[0] + vec1[1] * vec2[1] + vec1[2] * vec2[2];
 }
+
 
 void appendToFile(const std::string& filename, const std::string& data) {
     std::ofstream file;
@@ -278,4 +279,29 @@ std::string joinPaths(const std::string& path1, const std::string& path2)
     }
 
     return joinedPath;
+}
+
+std::vector<std::pair<int, int>> splitArray(int x, int y) {
+    std::vector<std::pair<int, int>> parts;
+
+    if (y <= 0) { // Ensure parts count is greater than zero.
+        return parts;
+    }
+
+    int partSize = x / y;
+    int remainder = x % y;
+
+    int start = 0;
+    int end = partSize - 1;
+
+    for (int i = 0; i < y; i++) {
+        if (i < remainder) {
+            end += 1;
+        }
+        parts.push_back({ start, end });
+        start = end + 1;
+        end = start + partSize - 1;
+    }
+
+    return parts;
 }

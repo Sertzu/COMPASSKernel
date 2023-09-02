@@ -133,6 +133,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -152,6 +153,7 @@
     <ClCompile Include="timeUtility.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="BS_thread_pool.hpp" />
     <ClInclude Include="helpers.h" />
     <ClInclude Include="MomentReader.h" />
     <ClInclude Include="multithreadingSim.h" />

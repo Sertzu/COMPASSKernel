@@ -10,10 +10,11 @@
 #include <random>
 #include <cmath>
 #include <algorithm>
+#include <array> 
 
 #include "helpers.h"
 #include "timeUtility.h"
-
+#include "BS_thread_pool.hpp"
 #include <thread>
 #include <mutex>
 #include <wincrypt.h>
@@ -80,8 +81,10 @@ private:
 	SimEnvironment();
 
 	double energy_diff_calculator(int& index, std::vector<double>& oldMom, std::vector<double>& newMom);
+    double rate_calculator(int& index,double& beta, std::vector<double>& oldMom, std::vector<double>& newMom);
 	double energy_calculator();
-	std::vector<double> generate_random_vec();
+	std::vector<double> generateRandomVecSingle();
+    void generateRandomVecArray(std::vector<std::vector<double>>& vecIn);
 
     ThreadLogger tlog;
 	unsigned int threadnum;
