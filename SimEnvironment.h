@@ -62,6 +62,7 @@ private:
 class SimEnvironment
 {
 public:
+    SimEnvironment();
 	SimEnvironment(std::string inputPath, std::string outputPath, double temperature);
 	SimEnvironment(std::string inputPath, std::string outputPath, double temperature, unsigned int threadnum);
     SimEnvironment(std::string inputPath, std::string outputPath, double temperature, unsigned int threadnum, const std::vector<std::vector<std::tuple<int, double>>>& links, const std::vector<std::tuple<int, std::vector<double>>>& atomCoordinates, const std::vector<std::vector<std::vector<int>>>& linksNN, std::vector<double> interactionKZ = { 0.0, 0.0, 0.0 }, std::vector<double> interactionC = { 0.0, 0.0, 0.0 }, std::vector<std::vector<double>> magmoms = {}, std::vector<double> magneticFieldHIn = { 0.0, 0.0, 0.0 });
@@ -73,12 +74,13 @@ public:
 
 	void runSim(int steps, bool measurement, bool approach = 0, double initialtemp = 300);
 	void setTemperature(double temp);
+    void setMagneticField(double xH, double yH, double zH);
+    void setOutputPath(std::string out);
 
 	std::string getOutputPath();
 	std::vector<double> getParameters();
     void writeMagneticMomentsToFile();
 private:
-	SimEnvironment();
 
 	double energy_diff_calculator(int& index, std::vector<double>& oldMom, std::vector<double>& newMom);
     double rate_calculator(int& index,double& beta, std::vector<double>& oldMom, std::vector<double>& newMom);
@@ -92,8 +94,9 @@ private:
 	std::vector<std::vector<std::tuple<int, double>>> links;
     std::vector<std::vector<std::vector<int>>> linksNN;
 	std::vector<std::vector<double>> magmoms;
-	std::vector<std::vector<std::vector<double>>> magmomsHistory;
     std::vector<std::tuple<int, std::vector<double>>> atomCoordinates;
+
+    std::vector<std::vector<std::vector<double>>> magmomsHistory;
 	std::vector<double> meanmagmomsHistory;
 	std::vector<double> energyHistory;
 

@@ -36,6 +36,9 @@
     <ClCompile Include="MomentReader.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
+    <ClCompile Include="simRunner.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="helpers.h">
@@ -57,6 +60,9 @@
       <Filter>Headerdateien</Filter>
     </ClInclude>
     <ClInclude Include="BS_thread_pool.hpp">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="simRunner.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
   </ItemGroup>

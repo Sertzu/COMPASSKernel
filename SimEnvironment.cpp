@@ -56,21 +56,30 @@ std::tuple<int, int, double, bool, bool, bool> extractLinks(const std::string& l
 std::tuple<int, std::vector<double>> extractCoordinates(const std::string& line)
 {
     std::istringstream iss(line);
-    int first, third;
+    int first, third, counter;
     double last;
-    std::vector<double> values;
+    static std::vector<double> values(20, 0.0);
     double value;
-    std::vector<double> coords;
-    while (iss >> value) {
-        values.push_back(value);
+    static std::vector<double> coords{0.0,0.0,0.0};
+    counter = 0;
+    while (iss >> value && counter < 12) {
+        values[counter] = value;
+        counter++;
     }
 
     first = static_cast<int>(values[0]);
-    coords.push_back(values[9]);
-    coords.push_back(values[10]);
-    coords.push_back(values[11]);
+    coords[0] = values[9];
+    coords[1] = values[10];
+    coords[2] = values[11];
 
     return std::make_tuple(first, coords);
+}
+
+SimEnvironment::SimEnvironment()
+{
+    inputPath = "";
+    outputPath = "";
+    temperature = 0;
 }
 
 SimEnvironment::SimEnvironment(std::string input, std::string output, double temp) : gen(rd())
@@ -80,6 +89,9 @@ SimEnvironment::SimEnvironment(std::string input, std::string output, double tem
     inputPath = input;
     outputPath = output;
     temperature = temp;
+
+    if (inputPath == "")
+        return;
     tlog << getCurrentTime().time_string <<  " [SimEnvironment] Setting up SimEnvironment!" << std::endl;
     tlog << getCurrentTime().time_string << " [SimEnvironment] Reading input file: " << input << std::endl;
     auto lines = read_file_without_comments(inputPath);
@@ -252,10 +264,16 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approach, double i
     std::vector<double> rateVector(atomnum, 0.0);
 
     BS::thread_pool pool;
+    magmomsHistory.clear();
+    meanmagmomsHistory.clear();
+    energyHistory.clear();
 
+    meanmagmomsHistory.resize(steps);
+    energyHistory.resize(steps);
+    std::future<double> energy;
     for (int step = 1; step <= steps; step++)
     {
-        if (step % 1000 == 0)
+        if (step % 100 == 0)
         {
             auto currenttime = getCurrentTime();
             if (measurement)
@@ -271,7 +289,7 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approach, double i
         }
         if (measurement)
         {
-            //magmomsHistory.push_back(magmoms);
+            
             double M1 = 0.0;
             double M2 = 0.0;
             double M3 = 0.0;
@@ -284,8 +302,9 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approach, double i
             M1 /= atomnum;
             M2 /= atomnum;
             M3 /= atomnum;
-            meanmagmomsHistory.push_back(std::sqrt(M1 * M1 + M2 * M2 + M3 * M3));
-            energyHistory.push_back(energy_calculator());
+            meanmagmomsHistory[step - 1] = std::sqrt(M1* M1 + M2 * M2 + M3 * M3);
+            energy = pool.submit(&SimEnvironment::energy_calculator, this);
+            //energyHistory[step - 1] = energy_calculator();
             if (steps - step < MAXMAGMOMHISTSIZE)
                 magmomsHistory.push_back(magmoms);
         }
@@ -318,6 +337,9 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approach, double i
 
         pool.wait_for_tasks();
 
+        if (measurement)
+            energyHistory[step - 1] = energy.get();
+
         pool.push_loop(atomnum,
             [&](const int a, const int b)
             {
@@ -342,6 +364,18 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approach, double i
 void SimEnvironment::setTemperature(double temp)
 {
     temperature = temp;
+}
+
+void SimEnvironment::setMagneticField(double xH, double yH, double zH)
+{
+    magneticFieldH[0] = xH;
+    magneticFieldH[1] = yH;
+    magneticFieldH[2] = zH;
+}
+
+void SimEnvironment::setOutputPath(std::string out)
+{
+    outputPath = out;
 }
 
 std::string SimEnvironment::getOutputPath()
@@ -393,18 +427,40 @@ double SimEnvironment::rate_calculator(int& index, double& beta, std::vector<dou
 double SimEnvironment::energy_calculator()
 {
     double energy = 0.0;
-    int link;
-    double param, sum;
-    for(int i = 0; i < atomnum; i++)
-        for (auto linkforatom : links[i])
-        {
-            link = std::get<0>(linkforatom);
-            param = std::get<1>(linkforatom);
-            dotProduct(sum, magmoms[i], magmoms[link]);
-            energy -= sum * param;
-        }
+    static BS::thread_pool calcpool;
+    static std::mutex energyLock;
 
-    return energy / 2;
+    calcpool.push_loop(atomnum,
+        [&](const int a, const int b)
+        {
+            double tempEnergy = 0.0;
+            int link;
+            double param, sum;
+            for (int i = a; i < b; i++)
+            {
+                for (auto linkforatom : links[i])
+                {
+                    link = std::get<0>(linkforatom);
+                    param = std::get<1>(linkforatom);
+                    dotProduct(sum, magmoms[i], magmoms[link]);
+                    tempEnergy -= sum * param * 0.5;
+                }
+                // Single Ion anisotropy + Zeeman Term
+                for (int j = 0; j < 3; j++)
+                {
+                    tempEnergy -= magmoms[i][j] * magmoms[i][j] * interactionK[j];
+
+                    tempEnergy -= magmoms[i][j] * magneticFieldH[j];
+                }
+            }
+            energyLock.lock();
+            energy += tempEnergy;
+            energyLock.unlock();
+        });
+
+    calcpool.wait_for_tasks();
+
+    return energy;
 }
 
 std::vector<double> SimEnvironment::generateRandomVecSingle()
