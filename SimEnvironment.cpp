@@ -127,6 +127,8 @@ SimEnvironment::SimEnvironment(std::string input, std::string output, double tem
 
     }
     interactionK = { 0.0, 0.0, 0.0 };
+    interactionC = { 0.0, 0.0, 0.0 };
+    magneticFieldH = { 0.0, 0.0, 0.0 };
     tlog << getCurrentTime().time_string << " [SimEnvironment] Initializing magnetic moments!" << std::endl;
     for (int i = 0; i < atomnum; i++)
         magmoms.push_back(generateRandomVecSingle());

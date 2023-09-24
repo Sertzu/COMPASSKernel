@@ -36,12 +36,72 @@ void SimRunner::SETTEMP(double temp)
 	simVars.temperature = temp;
 	simEnv->setTemperature(simVars.temperature);
 
-	print("ENVIRONMENT TEMPERATURE SET TO: " + std::to_string(simVars.temperature));
+	print("ENVIRONMENT TEMPERATURE SET TO: " + std::to_string(simVars.temperature) + "K");
 }
+
+void SimRunner::SETMAGFIELD(double HVal, XYZ dir)
+{
+	std::string dirString = "";
+
+	switch (dir) {
+		case XYZ::X: simEnv->setMagneticField(HVal, 0.0, 0.0); dirString = "X"; break;
+		case XYZ::Y: simEnv->setMagneticField(0.0, HVal, 0.0); dirString = "Y"; break;
+		case XYZ::Z: simEnv->setMagneticField(0.0, 0.0, HVal); dirString = "Z"; break;
+		default: throw std::runtime_error("Invalid direction for the H Field");
+	}
+
+	simVars.HDir = dir;
+	simVars.HStrength = HVal;
+
+	print("ENVIRONMENT MAGNETIC FIELD SET TO: " + std::to_string(simVars.HStrength) + "T, IN DIRECTION: " + dirString);
+}
+
+void SimRunner::APPROACHTEMP(double temperature, int steps)
+{
+	if (simVars.isInit)
+		print("APPROACHING TEMPERATURE: " + std::to_string(temperature) + "K FOR " + std::to_string(steps) + " STEPS");
+	else
+		throw std::runtime_error("ABORTING SIMULATION, ENVIRONMENT IS NOT FULLY INITIALIZED!");
+
+	simEnv->setTemperature(temperature);
+	simEnv->runSim(steps, false, true, simVars.temperature);
+	simVars.temperature = temperature;
+}
+
+void SimRunner::EQUILIB(int steps)
+{
+	if (simVars.isInit)
+		print("EQUILIB @ TEMPERATURE: " + std::to_string(simVars.temperature) + "K FOR " + std::to_string(steps) + " STEPS");
+	else
+		throw std::runtime_error("ABORTING SIMULATION, ENVIRONMENT IS NOT FULLY INITIALIZED!");
+
+	simEnv->runSim(steps, false);
+}
+
+void SimRunner::MEASUREMENT(int steps)
+{
+	if (simVars.isInit)
+		print("MEASURING @ TEMPERATURE: " + std::to_string(simVars.temperature) + "K FOR " + std::to_string(steps) + " STEPS");
+	else
+		throw std::runtime_error("ABORTING SIMULATION, ENVIRONMENT IS NOT FULLY INITIALIZED!");
+
+	simEnv->runSim(steps, true);
+
+	saveMeasurement(simEnv->getParameters());
+}
+
 
 void SimRunner::print(std::string toPrint)
 {
 	auto time = getCurrentTime().time_string;
 	auto msg = toPrint;
 	tlogRunner << (time + " [SimRunner] " + msg + "\n");
+}
+
+void SimRunner::saveMeasurement(std::vector<double> outVals)
+{
+	print("SAVING MEASUREMENT TO FILE: " + simVars.outputPath);
+	std::string out(formatDouble(outVals[0], 9, 5) + "  " + formatDouble(outVals[1], 9, 5) + "  " + formatDouble(outVals[2], 9, 5) + "  " + formatDouble(outVals[3], 9, 5) + "  " + formatDouble(outVals[4], 9, 5) + "  " + formatDouble(outVals[5], 9, 5) + "  " + formatDouble(outVals[6], 9, 5) + "  " + formatDouble(outVals[7], 9, 5));
+
+	appendToFile(simVars.outputPath, out);
 }

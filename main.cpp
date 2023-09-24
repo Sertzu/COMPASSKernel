@@ -24,6 +24,18 @@ int main(int argc, char* argv[])
     runner.LOAD();
     runner.SETOUT("results/testSrCoO3.dat");
     runner.SETTEMP(1000.);
+    runner.SETMAGFIELD(0.0, XYZ::X);
+
+    double temp = 300;
+    int steps = 10000;
+    while (temp > 250)
+    {
+        runner.APPROACHTEMP(temp, steps);
+        runner.EQUILIB(steps);
+        runner.MEASUREMENT(steps);
+
+        temp -= 5;
+    }
 
 
 
