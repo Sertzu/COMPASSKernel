@@ -12,36 +12,29 @@
 #include "SimEnvironment.h"
 #include "simRunner.h"
 #include "multithreadingSim.h"
-
+#include "scriptHandler.h"
 
 // -e 2000 -m 2000 -t 50 -o C:\Users\Sertzu\source\repos\COMPASSKernel\COMPASSKernel\results -i C:\Users\Sertzu\source\repos\COMPASSKernel\COMPASSKernel\inputs\Jij_my_test.dat
 int main(int argc, char* argv[])
 {
+    ScriptHandler scriptExecutor("inputs/SETTINGS.cfg");
+    scriptExecutor.loadScript("inputs/testScript.comps");
+    scriptExecutor.showScript();
 
-    SimRunner runner("inputs/SETTINGS.cfg");
+    exit(1);
+    SimRunner simRunner("inputs/SETTINGS.cfg");
 
     // RUNNER TESTING
-    runner.LOAD();
-    runner.SETOUT("results/testSrCoO3.dat");
-    runner.SETTEMP(1000.);
-    runner.SETMAGFIELD(0.0, XYZ::X);
+    simRunner.LOAD();
+    simRunner.SETOUT("results/testSrCoO3Runner.dat");
+    simRunner.SETTEMP(1000.);
+    simRunner.SETMAGFIELD(0.0, XYZ::X);
 
-    double temp = 300;
-    int steps = 10000;
-    while (temp > 250)
-    {
-        runner.APPROACHTEMP(temp, steps);
-        runner.EQUILIB(steps);
-        runner.MEASUREMENT(steps);
+    simRunner.APPROACHTEMP(300., 40000);
 
-        temp -= 5;
-    }
-
-
-
-
-
-
+    simRunner.SWEEPTEMP(250., 5., 20000, 20000, 20000);
+    
+    exit(1);
 
     // END RUNNER TEST
     auto time = getCurrentTime();

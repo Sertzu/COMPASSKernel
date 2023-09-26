@@ -1,7 +1,7 @@
 #include "simRunner.h"
 #include <format>
 
-SimRunner::SimRunner(std::string settingsPath) : settings(settingsPath)
+SimRunner::SimRunner(const std::string settingsPath) : settings(settingsPath)
 {
 	simVars.inputPath = settings.get<std::string>("inputPath");
 	simVars.outputPath = settings.get<std::string>("outputPath");
@@ -68,6 +68,11 @@ void SimRunner::APPROACHTEMP(double temperature, int steps)
 	simVars.temperature = temperature;
 }
 
+void SimRunner::APPROACHMAG(double HVal, int steps)
+{
+	throw std::runtime_error("NOT IMPLEMENTED YET");
+}
+
 void SimRunner::EQUILIB(int steps)
 {
 	if (simVars.isInit)
@@ -90,8 +95,34 @@ void SimRunner::MEASUREMENT(int steps)
 	saveMeasurement(simEnv->getParameters());
 }
 
+void SimRunner::SWEEPTEMP(double targetTemp, double tempSteps, int approachSteps, int equilibSteps, int measurementSteps)
+{
+	if (targetTemp > simVars.temperature)
+		throw std::logic_error("TARGET TEMP IS ABOVE CURRENT TEMP");
 
-void SimRunner::print(std::string toPrint)
+	double currentTemp = simVars.temperature;
+
+	print("STARTING TEMPERATURE SWEEP FROM: " + std::to_string(currentTemp) + "K TO: " + std::to_string(targetTemp) + "K\n");
+
+	while (currentTemp > targetTemp)
+	{
+		APPROACHTEMP(currentTemp, approachSteps);
+		EQUILIB(equilibSteps);
+		MEASUREMENT(measurementSteps);
+
+		currentTemp -= tempSteps;
+	}
+	simVars.temperature = currentTemp;
+	print("FINISHED TEMPERATURE SWEEP FROM: " + std::to_string(currentTemp) + "K TO: " + std::to_string(targetTemp) + "K\n");
+}
+
+void SimRunner::SWEEPMAG(double targetH, double HSteps, int approachSteps, int equilibSteps, int measurementSteps)
+{
+	throw std::runtime_error("NOT IMPLEMENTED YET");
+}
+
+
+void SimRunner::print(const std::string toPrint)
 {
 	auto time = getCurrentTime().time_string;
 	auto msg = toPrint;

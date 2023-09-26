@@ -148,6 +148,7 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MomentReader.cpp" />
     <ClCompile Include="multithreadingSim.cpp" />
+    <ClCompile Include="scriptHandler.cpp" />
     <ClCompile Include="SettingsClass.cpp" />
     <ClCompile Include="SimEnvironment.cpp" />
     <ClCompile Include="simRunner.cpp" />
@@ -158,6 +159,7 @@
     <ClInclude Include="helpers.h" />
     <ClInclude Include="MomentReader.h" />
     <ClInclude Include="multithreadingSim.h" />
+    <ClInclude Include="scriptHandler.h" />
     <ClInclude Include="SettingsClass.h" />
     <ClInclude Include="SimEnvironment.h" />
     <ClInclude Include="simRunner.h" />

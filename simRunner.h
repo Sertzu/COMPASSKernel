@@ -28,22 +28,31 @@ struct SimulationVariables
 class SimRunner
 {
 public:
-	SimRunner(std::string settingsPath);
+	SimRunner(const std::string settingsPath);
 
 	void LOAD(std::string inputFile = "");
 	void SETOUT(std::string outFile = "");
+	void LOADCHECKPOINT(std::string outFile = "");
+
 	void SETTEMP(double temp);
 	void SETMAGFIELD(double HVal, XYZ dir);
 
 	void APPROACHTEMP(double temperature, int steps);
+
+	// NOT IMPLEMENTED
 	void APPROACHMAG(double HVal, int steps);
 
 	void EQUILIB(int steps);
 	void MEASUREMENT(int steps);
+
+	void SWEEPTEMP(double targetTemp, double tempSteps, int approachSteps, int equilibSteps, int measurementSteps);
+
+	// NOT IMPLEMENTED
+	void SWEEPMAG(double targetH, double HSteps, int approachSteps, int equilibSteps, int measurementSteps);
 private:
 	SimRunner();
 
-	void print(std::string toPrint);
+	void print(const std::string toPrint);
 
 	void saveMeasurement(std::vector<double> outVals);
 

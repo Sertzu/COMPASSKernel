@@ -275,7 +275,7 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approach, double i
     std::future<double> energy;
     for (int step = 1; step <= steps; step++)
     {
-        if (step % 100 == 0)
+        if (step % statusSteps == 0)
         {
             auto currenttime = getCurrentTime();
             if (measurement)
@@ -378,6 +378,11 @@ void SimEnvironment::setMagneticField(double xH, double yH, double zH)
 void SimEnvironment::setOutputPath(std::string out)
 {
     outputPath = out;
+}
+
+void SimEnvironment::setStatusSteps(int steps)
+{
+    statusSteps = steps;
 }
 
 std::string SimEnvironment::getOutputPath()

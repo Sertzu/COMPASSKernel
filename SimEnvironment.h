@@ -77,6 +77,8 @@ public:
     void setMagneticField(double xH, double yH, double zH);
     void setOutputPath(std::string out);
 
+    void setStatusSteps(int steps);
+
 	std::string getOutputPath();
 	std::vector<double> getParameters();
     void writeMagneticMomentsToFile();
@@ -114,5 +116,5 @@ private:
 	std::random_device rd;
 	std::mt19937 gen;
 	
-
+    int statusSteps = 1000;
 };
