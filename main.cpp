@@ -21,18 +21,25 @@ int main(int argc, char* argv[])
     scriptExecutor.loadScript("inputs/testScript.comps");
     scriptExecutor.showScript();
 
-    exit(1);
     SimRunner simRunner("inputs/SETTINGS.cfg");
 
+    int stepsInit = 40000;
+    int steps = 1000;
     // RUNNER TESTING
-    simRunner.LOAD();
-    simRunner.SETOUT("results/testSrCoO3Runner.dat");
+    simRunner.LOAD("inputs/GdMn6Sn6_b20_c0.1_mJValue.dat");
+    simRunner.SETOUT("results/GdMn6Sn6_b20_c0.1_mJValue.dat");
     simRunner.SETTEMP(1000.);
-    simRunner.SETMAGFIELD(0.0, XYZ::X);
+    simRunner.SETMAGFIELD(0.1, XYZ::Y);
 
-    simRunner.APPROACHTEMP(300., 40000);
+    simRunner.APPROACHTEMP(1., stepsInit);
+    simRunner.EQUILIB(stepsInit);
+    simRunner.MEASUREMENT(stepsInit);
 
-    simRunner.SWEEPTEMP(250., 5., 20000, 20000, 20000);
+    simRunner.SWEEPMAG(100., 10., steps, steps, steps);
+    simRunner.SWEEPMAG(-100., -10., steps, steps, steps);
+    simRunner.SWEEPMAG(100., 10., steps, steps, steps);
+
+    //simRunner.SWEEPTEMP(250., 5., 20000, 20000, 20000);
     
     exit(1);
 

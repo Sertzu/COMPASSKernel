@@ -130,6 +130,7 @@ SimEnvironment::SimEnvironment(std::string input, std::string output, double tem
     interactionC = { 0.0, 0.0, 0.0 };
     magneticFieldH = { 0.0, 0.0, 0.0 };
     tlog << getCurrentTime().time_string << " [SimEnvironment] Initializing magnetic moments!" << std::endl;
+    magmoms.reserve(atomnum);
     for (int i = 0; i < atomnum; i++)
         magmoms.push_back(generateRandomVecSingle());
     tlog << getCurrentTime().time_string << " [SimEnvironment] Setup complete!" << std::endl << std::endl;
@@ -241,29 +242,38 @@ std::vector<std::vector<double>> SimEnvironment::getMagmoms()
     return magmoms;
 }
 
-void SimEnvironment::runSim(int steps, bool measurement, bool approach, double initialtemp)
+void SimEnvironment::runSim(int steps, bool measurement, bool approachTemp, double initialtemp, bool approachMag, double initialH)
 {
     magmomsHistory.clear();
     meanmagmomsHistory.clear();
     energyHistory.clear();
     if (measurement)
         tlog << getCurrentTime().time_string << " [Kernel] Starting MC simulation in measurement mode for " << steps << " steps!" << std::endl;
-    else if(approach)
+    else if(approachTemp)
         tlog << getCurrentTime().time_string << " [Kernel] Starting MC simulation in approach mode for " << steps << " steps!" << std::endl;
     else
         tlog << getCurrentTime().time_string << " [Kernel] Starting MC simulation in equilib mode for " << steps << " steps!" << std::endl;
     auto lasttime = getCurrentTime();
-    double approachFactor;
+    double approachValue;
     double runningTemperature = temperature;
-    if (approach)
+    double runningMag = magneticFieldH[magDir];
+    if (approachTemp)
     {
         runningTemperature = initialtemp;
-        approachFactor = std::pow(temperature / initialtemp, 1.0 / steps);
-        tlog << getCurrentTime().time_string << " [Kernel] Initial temperature is " << initialtemp << "K and approachFactor is " << approachFactor << std::endl;
+        approachValue = std::pow(temperature / initialtemp, 1.0 / steps);
+        tlog << getCurrentTime().time_string << " [Kernel] Initial temperature is " << initialtemp << "K and Approachfactor is " << approachValue << std::endl;
+    }
+    else if (approachMag)
+    {
+        runningMag = initialH;
+        approachValue = (magneticFieldH[magDir] - initialH) / steps;
+        magneticFieldH[magDir] = runningMag;
+        tlog << getCurrentTime().time_string << " [Kernel] Initial Magnetic Field is " << initialH << "T and Approachvalue is " << approachValue << std::endl;
     }
 
     std::vector<std::vector<double>> randomNumberVector3D(atomnum, { 0.0 ,0.0 , 0.0});
     std::vector<double> rateVector(atomnum, 0.0);
+    std::vector<double> acceptanceVector(atomnum, 0.0);
 
     BS::thread_pool pool;
     magmomsHistory.clear();
@@ -281,9 +291,12 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approach, double i
             if (measurement)
                 tlog << getCurrentTime().time_string << " [Kernel] Currently at step " << step << " of " << steps << " in measurement mode. Last 100 steps took: " 
                 << currenttime.unix_time - lasttime.unix_time << " seconds!" << std::endl;
-            else if (approach)
-                tlog << getCurrentTime().time_string << " [Kernel] Currently at step " << step << " / " << steps << " in approach mode. Current temperature is " 
+            else if (approachTemp)
+                tlog << getCurrentTime().time_string << " [Kernel] Currently at step " << step << " / " << steps << " in approachTemp mode. Current temperature is " 
                 << runningTemperature << "K !" << std::endl;
+            else if (approachMag)
+                tlog << getCurrentTime().time_string << " [Kernel] Currently at step " << step << " / " << steps << " in approachMag mode. Current Magnetic Field is "
+                << magneticFieldH[magDir] << "K !" << std::endl;
             else
                 tlog << getCurrentTime().time_string << " [Kernel] Currently at step " << step << " / " << steps << " in equilib mode. Last 100 steps took: "
                 << currenttime.unix_time - lasttime.unix_time << " seconds!" << std::endl;
@@ -337,24 +350,32 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approach, double i
                     rateVector[i] = rate_calculator(i, beta, magmoms[i], randomNumberVector3D[i]);
             });
 
+        generateAcceptanceVec(acceptanceVector);
         pool.wait_for_tasks();
 
         if (measurement)
             energyHistory[step - 1] = energy.get();
 
+
         pool.push_loop(atomnum,
             [&](const int a, const int b)
             {
                 for (int i = a; i < b; ++i)
-                    if (ran(gen) < rateVector[i])
+                    if (acceptanceVector[i] < rateVector[i])
                     {
                         magmoms[i] = randomNumberVector3D[i];
                     }
             });
 
         pool.wait_for_tasks();
-        if (approach)
-            runningTemperature *= approachFactor;
+
+        if (approachTemp)
+            runningTemperature *= approachValue;
+        else if (approachMag)
+        {
+            runningMag += approachValue;
+            magneticFieldH[magDir] = runningMag;
+        }
 
     }
     if (measurement)
@@ -370,6 +391,15 @@ void SimEnvironment::setTemperature(double temp)
 
 void SimEnvironment::setMagneticField(double xH, double yH, double zH)
 {
+    if (abs(xH) > 0.00001)
+        magDir = 0;
+    else if (abs(yH) > 0.00001)
+        magDir = 1;
+    else if (abs(zH) > 0.00001)
+        magDir = 2;
+    else
+        magDir = -1;
+
     magneticFieldH[0] = xH;
     magneticFieldH[1] = yH;
     magneticFieldH[2] = zH;
@@ -390,7 +420,7 @@ std::string SimEnvironment::getOutputPath()
     return outputPath;
 }
 
-double SimEnvironment::energy_diff_calculator(int& index, std::vector<double>& oldMom, std::vector<double>& newMom)
+double SimEnvironment::energy_diff_calculator(const int& index, const std::vector<double>& oldMom, const std::vector<double>& newMom)
 {
     double Hold = 0.0;
     double Hnew = 0.0;
@@ -509,6 +539,17 @@ void SimEnvironment::generateRandomVecArray(std::vector<std::vector<double>>& ve
         vecIn[i][0] = 2 * C1 * std::sqrt((1 - Csq));
         vecIn[i][1] = 2 * C2 * std::sqrt((1 - Csq));
         vecIn[i][2] = 1 - 2 * Csq;
+    }
+}
+
+void SimEnvironment::generateAcceptanceVec(std::vector<double>& vecIn)
+{
+    double C1, C2, Csq;
+
+    std::uniform_real_distribution<> ran(0.0, 1.0);
+    for (int i = 0; i < vecIn.size(); i++)
+    {
+        vecIn[i] = ran(gen);
     }
 }
 

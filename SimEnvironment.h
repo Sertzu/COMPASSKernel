@@ -72,7 +72,7 @@ public:
     std::vector<std::tuple<int, std::vector<double>>> getAtomCoordinates();
     std::vector<std::vector<double>> getMagmoms();
 
-	void runSim(int steps, bool measurement, bool approach = 0, double initialtemp = 300);
+	void runSim(int steps, bool measurement, bool approachTemp = 0, double initialtemp = 300, bool approachMag = 0, double initialH = 0.0);
 	void setTemperature(double temp);
     void setMagneticField(double xH, double yH, double zH);
     void setOutputPath(std::string out);
@@ -84,10 +84,12 @@ public:
     void writeMagneticMomentsToFile();
 private:
 
-	double energy_diff_calculator(int& index, std::vector<double>& oldMom, std::vector<double>& newMom);
+	double energy_diff_calculator(const int& index,const std::vector<double>& oldMom,const std::vector<double>& newMom);
     double rate_calculator(int& index,double& beta, std::vector<double>& oldMom, std::vector<double>& newMom);
 	double energy_calculator();
 	std::vector<double> generateRandomVecSingle();
+
+    void generateAcceptanceVec(std::vector<double>& vecIn);
     void generateRandomVecArray(std::vector<std::vector<double>>& vecIn);
 
     ThreadLogger tlog;
@@ -113,6 +115,7 @@ private:
     std::vector<double> interactionK;
     std::vector<double> interactionC;
     std::vector<double> magneticFieldH;
+    int magDir;
 	std::random_device rd;
 	std::mt19937 gen;
 	

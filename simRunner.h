@@ -39,7 +39,6 @@ public:
 
 	void APPROACHTEMP(double temperature, int steps);
 
-	// NOT IMPLEMENTED
 	void APPROACHMAG(double HVal, int steps);
 
 	void EQUILIB(int steps);

@@ -70,7 +70,19 @@ void SimRunner::APPROACHTEMP(double temperature, int steps)
 
 void SimRunner::APPROACHMAG(double HVal, int steps)
 {
-	throw std::runtime_error("NOT IMPLEMENTED YET");
+	if (simVars.isInit)
+		print("APPROACHING MAGNETIC FIELD STRENGTH: " + std::to_string(HVal) + "T FOR " + std::to_string(steps) + " STEPS");
+	else
+		throw std::runtime_error("ABORTING SIMULATION, ENVIRONMENT IS NOT FULLY INITIALIZED!");
+
+	switch (simVars.HDir) {
+		case XYZ::X: simEnv->setMagneticField(HVal, 0.0, 0.0); break;
+		case XYZ::Y: simEnv->setMagneticField(0.0, HVal, 0.0); break;
+		case XYZ::Z: simEnv->setMagneticField(0.0, 0.0, HVal); break;
+		default: throw std::runtime_error("Invalid direction for the H Field");
+	}
+	simEnv->runSim(steps, false, false, simVars.temperature, true, simVars.HStrength + 0.00001);
+	simVars.HStrength = HVal;
 }
 
 void SimRunner::EQUILIB(int steps)
@@ -118,7 +130,37 @@ void SimRunner::SWEEPTEMP(double targetTemp, double tempSteps, int approachSteps
 
 void SimRunner::SWEEPMAG(double targetH, double HSteps, int approachSteps, int equilibSteps, int measurementSteps)
 {
-	throw std::runtime_error("NOT IMPLEMENTED YET");
+	double currentFieldStrength = simVars.HStrength;
+
+	print("STARTING MAGNETIC FIELD SWEEP FROM: " + std::to_string(currentFieldStrength) + "T TO: " + std::to_string(targetH) + "T\n");
+	bool targetHigher = (targetH - currentFieldStrength > 0.);
+
+	if(targetHigher)
+		while (currentFieldStrength < targetH)
+		{
+			if (HSteps <= 0.)
+				throw std::runtime_error("ENDLESS LOOP IN SWEEPMAG");
+
+			APPROACHMAG(currentFieldStrength, approachSteps);
+			EQUILIB(equilibSteps);
+			MEASUREMENT(measurementSteps);
+
+			currentFieldStrength += HSteps;
+		}
+	else
+		while (currentFieldStrength > targetH)
+		{
+			if (HSteps >= 0.)
+				throw std::runtime_error("ENDLESS LOOP IN SWEEPMAG");
+
+			APPROACHMAG(currentFieldStrength, approachSteps);
+			EQUILIB(equilibSteps);
+			MEASUREMENT(measurementSteps);
+
+			currentFieldStrength += HSteps;
+		}
+	simVars.HStrength = currentFieldStrength;
+	print("FINISHED MAGNETIC FIELD SWEEP FROM: " + std::to_string(currentFieldStrength) + "T TO: " + std::to_string(targetH) + "T\n");
 }
 
 
