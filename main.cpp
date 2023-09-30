@@ -18,11 +18,12 @@
 int main(int argc, char* argv[])
 {
     ScriptHandler scriptExecutor("inputs/SETTINGS.cfg");
-    scriptExecutor.loadScript("inputs/testScript.comps");
+    scriptExecutor.loadScript("inputs/testScriptBase.comps");
     scriptExecutor.showScript();
-
+    scriptExecutor.runScript();
+    exit(1);
     SimRunner simRunner("inputs/SETTINGS.cfg");
-
+    
     int stepsInit = 40000;
     int steps = 1000;
     // RUNNER TESTING

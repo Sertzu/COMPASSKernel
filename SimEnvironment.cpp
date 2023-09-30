@@ -296,7 +296,7 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approachTemp, doub
                 << runningTemperature << "K !" << std::endl;
             else if (approachMag)
                 tlog << getCurrentTime().time_string << " [Kernel] Currently at step " << step << " / " << steps << " in approachMag mode. Current Magnetic Field is "
-                << magneticFieldH[magDir] << "K !" << std::endl;
+                << magneticFieldH[magDir] << "T !" << std::endl;
             else
                 tlog << getCurrentTime().time_string << " [Kernel] Currently at step " << step << " / " << steps << " in equilib mode. Last 100 steps took: "
                 << currenttime.unix_time - lasttime.unix_time << " seconds!" << std::endl;
@@ -544,8 +544,6 @@ void SimEnvironment::generateRandomVecArray(std::vector<std::vector<double>>& ve
 
 void SimEnvironment::generateAcceptanceVec(std::vector<double>& vecIn)
 {
-    double C1, C2, Csq;
-
     std::uniform_real_distribution<> ran(0.0, 1.0);
     for (int i = 0; i < vecIn.size(); i++)
     {

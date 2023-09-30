@@ -211,6 +211,58 @@ void ScriptHandler::runScript()
         print("COULDN'T START DUE TO INVALID SCRIPT!");
         return;
     }
+
+    for (const auto& command : script_)
+    {
+        showScript();
+        auto commandType = stringToOptionEnum(command[0]);
+        switch (commandType)
+        {
+        case(ScriptOption::LOAD):
+            simRunner_.LOAD(command[1]);
+            break;
+        case(ScriptOption::SETOUT):
+            simRunner_.SETOUT(command[1]);
+            break;
+        case(ScriptOption::LOADCHECKPOINT):
+            //simRunner_.LOADCHECKPOINT(command[1]);
+            break;
+        case(ScriptOption::SETTEMP):
+            simRunner_.SETTEMP(std::stod(command[1]));
+            break;
+        case(ScriptOption::SETMAGFIELD):
+            if (command[2] == "X")
+                simRunner_.SETMAGFIELD(std::stod(command[1]), XYZ::X);
+            if (command[2] == "Y")
+                simRunner_.SETMAGFIELD(std::stod(command[1]), XYZ::Y);
+            if (command[2] == "Z")
+                simRunner_.SETMAGFIELD(std::stod(command[1]), XYZ::Z);
+            break;
+        case(ScriptOption::APPROACHTEMP):
+            simRunner_.APPROACHTEMP(std::stod(command[1]), std::stoi(command[2]));
+            break;
+        case(ScriptOption::APPROACHMAG):
+            simRunner_.APPROACHTEMP(std::stod(command[1]), std::stoi(command[2]));
+            break;
+        case(ScriptOption::EQUILIB):
+            simRunner_.EQUILIB(std::stoi(command[1]));
+            break;
+        case(ScriptOption::MEASUREMENT):
+            simRunner_.MEASUREMENT(std::stoi(command[1]));
+            break;
+        case(ScriptOption::SWEEPTEMP):
+            simRunner_.SWEEPTEMP(std::stod(command[1]), std::stod(command[2]), std::stoi(command[3]), std::stoi(command[4]), std::stoi(command[5]));
+            break;
+        case(ScriptOption::SWEEPMAG):
+            simRunner_.SWEEPMAG(std::stod(command[1]), std::stod(command[2]), std::stoi(command[3]), std::stoi(command[4]), std::stoi(command[5]));
+            break;
+        default:
+            throw std::runtime_error("CRITICAL FAILURE IN THE SCRIPTRUNNER");
+        }
+        currentPos_ += 1;
+
+    }
+
 }
 
 void ScriptHandler::print(const std::string toPrint)
