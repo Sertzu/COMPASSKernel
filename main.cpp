@@ -21,6 +21,8 @@ int main(int argc, char* argv[])
     scriptExecutor.loadScript("inputs/testScriptBase.comps");
     scriptExecutor.showScript();
     scriptExecutor.runScript();
+
+
     exit(1);
     SimRunner simRunner("inputs/SETTINGS.cfg");
     

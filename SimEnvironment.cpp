@@ -1,4 +1,5 @@
 #include "SimEnvironment.h"
+#include <barrier>
 
 std::vector<std::string> read_file_without_comments(const std::string& file_path) {
     std::vector<std::string> lines;
@@ -275,6 +276,12 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approachTemp, doub
     std::vector<double> rateVector(atomnum, 0.0);
     std::vector<double> acceptanceVector(atomnum, 0.0);
 
+    generateRandomVecArray(randomNumberVector3D);
+    generateAcceptanceVec(acceptanceVector);
+
+    std::vector<std::vector<double>> randomNumberVector3DSwap(atomnum, { 0.0 ,0.0 , 0.0 });
+    std::vector<double> acceptanceVectorSwap(atomnum, 0.0);
+
     BS::thread_pool pool;
     magmomsHistory.clear();
     meanmagmomsHistory.clear();
@@ -283,6 +290,46 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approachTemp, doub
     meanmagmomsHistory.resize(steps);
     energyHistory.resize(steps);
     std::future<double> energy;
+
+    int workerCount = 24;
+    std::vector<std::vector<std::vector<double>>> magmomCopy;
+    for (int i = 0; i < workerCount; i++)
+    {
+        magmomCopy.push_back(magmoms);
+    }
+    auto startIndices = getStartIndices(magmoms.size(), workerCount);
+
+    std::barrier syncPointInit(workerCount + 1);
+    std::barrier syncPointRun(workerCount + 1);
+
+    auto mcWorker = [&](std::stop_token stopToken, double& beta, std::vector<std::vector<double>> &magmoms, std::vector<std::vector<double>>& randomNumberVector3D, std::vector<double> &acceptanceVector, int start, int end)
+    {
+        syncPointInit.arrive_and_wait();
+        while (!stopToken.stop_requested())
+        {
+            for (int i = start; i < end; ++i)
+                if (acceptanceVector[i] < rate_calculator(i, beta, magmoms[i], randomNumberVector3D[i], magmoms))
+                {
+                    magmoms[i] = randomNumberVector3D[i];
+                }
+            syncPointRun.arrive_and_wait();
+            for (auto& magmomEntry : magmomCopy)
+                for (int i = start; i < end; ++i)
+                    magmomEntry[i] = magmoms[i];
+            syncPointRun.arrive_and_wait();
+        }
+    };
+
+    std::vector<std::jthread> mcWorkers;
+    double beta = 1 / (kB * runningTemperature);
+
+    mcWorkers.reserve(workerCount);
+    for (int i = 0; i < workerCount; ++i) {
+        int start = startIndices[i];
+        int end = (i == workerCount - 1) ? magmoms.size() : startIndices[i + 1];
+        mcWorkers.emplace_back(mcWorker, std::ref(beta), std::ref(magmomCopy[i]), std::ref(randomNumberVector3D),std::ref(acceptanceVector), start, end);
+    }
+
     for (int step = 1; step <= steps; step++)
     {
         if (step % statusSteps == 0)
@@ -324,30 +371,31 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approachTemp, doub
                 magmomsHistory.push_back(magmoms);
         }
 
-        double diff;
-        double rate;
-        std::uniform_real_distribution<> ran(0.0, 1.0);
-        double beta = 1 / (kB * runningTemperature);
-        generateRandomVecArray(randomNumberVector3D);
-        /*
-        //Normal Way
-        for (int i = 0; i < atomnum; i++)
+        if (step == 1)
         {
-            diff = energy_diff_calculator(i, magmoms[i], randomNumberVector[i]);
-            rate = std::exp(-diff * beta);
-            if (ran(gen) < rate)
-            {
-                magmoms[i] = randomNumberVector[i];
-            }
+            if (measurement)
+                energyHistory[step - 1] = energy.get();
+            syncPointInit.arrive_and_wait();
         }
-        */
-        
+
+        if (measurement && step != 1)
+            energyHistory[step - 1] = energy.get();
+
+        generateRandomVecArray(randomNumberVector3DSwap);
+        generateAcceptanceVec(acceptanceVectorSwap);
+
+        syncPointRun.arrive_and_wait();
+
+        randomNumberVector3D.swap(randomNumberVector3DSwap);
+        acceptanceVector.swap(acceptanceVectorSwap);
+
+        /*
         //Parallel Way
         pool.push_loop(atomnum,
             [&](const int a, const int b)
             {
                 for (int i = a; i < b; ++i)
-                    rateVector[i] = rate_calculator(i, beta, magmoms[i], randomNumberVector3D[i]);
+                    rateVector[i] = rate_calculator(i, beta, magmoms[i], randomNumberVector3D[i], magmoms);
             });
 
         generateAcceptanceVec(acceptanceVector);
@@ -368,6 +416,7 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approachTemp, doub
             });
 
         pool.wait_for_tasks();
+        */
 
         if (approachTemp)
             runningTemperature *= approachValue;
@@ -377,7 +426,16 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approachTemp, doub
             magneticFieldH[magDir] = runningMag;
         }
 
+        if(step == steps)
+            for(auto & worker : mcWorkers)
+                worker.request_stop();
+
+        syncPointRun.arrive_and_wait();
+        magmoms = magmomCopy[0];
+
     }
+    for (auto& worker : mcWorkers)
+        worker.join();
     if (measurement)
         tlog << getCurrentTime().time_string << " [Kernel] Finished MC simulation in measurement mode!" << std::endl << std::endl;
     else
@@ -420,7 +478,7 @@ std::string SimEnvironment::getOutputPath()
     return outputPath;
 }
 
-double SimEnvironment::energy_diff_calculator(const int& index, const std::vector<double>& oldMom, const std::vector<double>& newMom)
+double SimEnvironment::energy_diff_calculator(const int& index, const std::vector<double>& oldMom, const std::vector<double>& newMom, const std::vector<std::vector<double>>& magmoms)
 {
     double Hold = 0.0;
     double Hnew = 0.0;
@@ -456,9 +514,9 @@ double SimEnvironment::energy_diff_calculator(const int& index, const std::vecto
     return Hnew - Hold;
 }
 
-double SimEnvironment::rate_calculator(int& index, double& beta, std::vector<double>& oldMom, std::vector<double>& newMom)
+double SimEnvironment::rate_calculator(int& index, double& beta, std::vector<double>& oldMom, std::vector<double>& newMom, const std::vector<std::vector<double>>& magmoms)
 {
-    return std::exp(-energy_diff_calculator(index, oldMom, newMom) * beta);
+    return std::exp(-energy_diff_calculator(index, oldMom, newMom, magmoms) * beta);
 }
 
 double SimEnvironment::energy_calculator()

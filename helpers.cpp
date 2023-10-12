@@ -281,6 +281,31 @@ std::string joinPaths(const std::string& path1, const std::string& path2)
     return joinedPath;
 }
 
+std::vector<int> getStartIndices(int size, int threadcount)
+{
+    std::vector<int> startIndices;
+
+    // Calculate the number of elements each thread will handle.
+    int chunkSize = size / threadcount;
+    int remainder = size % threadcount;
+
+    int currentIndex = 0;
+    for (int i = 0; i < threadcount; i++) {
+        startIndices.push_back(currentIndex);
+
+        // If there's a remainder, distribute it among the threads.
+        if (remainder > 0) {
+            currentIndex += chunkSize + 1;
+            remainder--;
+        }
+        else {
+            currentIndex += chunkSize;
+        }
+    }
+
+    return startIndices;
+}
+
 std::vector<std::pair<int, int>> splitArray(int x, int y) {
     std::vector<std::pair<int, int>> parts;
 

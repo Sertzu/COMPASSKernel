@@ -167,6 +167,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="inputs\SETTINGS.cfg" />
+    <None Include="inputs\testScriptBase.comps" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

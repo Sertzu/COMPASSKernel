@@ -29,3 +29,5 @@ std::string formatDouble(double value, int width, int precision);
 std::vector<double> generate_evenly_spaced_numbers(double a, double b, int n);
 void sort_file_by_first_entry(const std::string& filename);
 std::string joinPaths(const std::string& path1, const std::string& path2);
+
+std::vector<int> getStartIndices(int size, int threadcount);

@@ -84,8 +84,8 @@ public:
     void writeMagneticMomentsToFile();
 private:
 
-	double energy_diff_calculator(const int& index,const std::vector<double>& oldMom,const std::vector<double>& newMom);
-    double rate_calculator(int& index,double& beta, std::vector<double>& oldMom, std::vector<double>& newMom);
+	double energy_diff_calculator(const int& index,const std::vector<double>& oldMom,const std::vector<double>& newMom, const std::vector<std::vector<double>>& magmoms);
+    double rate_calculator(int& index,double& beta, std::vector<double>& oldMom, std::vector<double>& newMom, const std::vector<std::vector<double>>& magmoms);
 	double energy_calculator();
 	std::vector<double> generateRandomVecSingle();
 
