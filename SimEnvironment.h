@@ -18,6 +18,7 @@
 #include <thread>
 #include <mutex>
 #include <wincrypt.h>
+#include <barrier>
 
 class ThreadLogger {
 public:
@@ -84,13 +85,13 @@ public:
     void writeMagneticMomentsToFile();
 private:
 
-	double energy_diff_calculator(const int& index,const std::vector<double>& oldMom,const std::vector<double>& newMom, const std::vector<std::vector<double>>& magmoms);
-    double rate_calculator(int& index,double& beta, std::vector<double>& oldMom, std::vector<double>& newMom, const std::vector<std::vector<double>>& magmoms);
+	double energy_diff_calculator(const int& index,const std::vector<double>& oldMom,const std::vector<double>& newMom, const std::vector<std::vector<double>>& magmoms, const std::vector<std::vector<std::tuple<int, double>>>& atomlinks);
+    double rate_calculator(int& index,double& beta, std::vector<double>& oldMom, std::vector<double>& newMom, const std::vector<std::vector<double>>& magmoms, const std::vector<std::vector<std::tuple<int, double>>>& atomlinks);
 	double energy_calculator();
 	std::vector<double> generateRandomVecSingle();
 
     void generateAcceptanceVec(std::vector<double>& vecIn);
-    void generateRandomVecArray(std::vector<std::vector<double>>& vecIn);
+    void generateRandomVecArray(std::vector<std::vector<double>>& vecIn, std::uniform_real_distribution<>& randomizer, std::mt19937& generator);
 
     ThreadLogger tlog;
 	unsigned int threadnum;
@@ -116,6 +117,7 @@ private:
     std::vector<double> interactionC;
     std::vector<double> magneticFieldH;
     int magDir;
+
 	std::random_device rd;
 	std::mt19937 gen;
 	

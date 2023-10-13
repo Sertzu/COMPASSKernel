@@ -1,5 +1,8 @@
 #include "SimEnvironment.h"
-#include <barrier>
+
+inline void dotProduct(double& sum, const std::vector<double>& vec1, const std::vector<double>& vec2) {
+    sum = vec1[0] * vec2[0] + vec1[1] * vec2[1] + vec1[2] * vec2[2];
+}
 
 std::vector<std::string> read_file_without_comments(const std::string& file_path) {
     std::vector<std::string> lines;
@@ -254,7 +257,7 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approachTemp, doub
         tlog << getCurrentTime().time_string << " [Kernel] Starting MC simulation in approach mode for " << steps << " steps!" << std::endl;
     else
         tlog << getCurrentTime().time_string << " [Kernel] Starting MC simulation in equilib mode for " << steps << " steps!" << std::endl;
-    auto lasttime = getCurrentTime();
+    auto lasttime = std::chrono::high_resolution_clock::now();
     double approachValue;
     double runningTemperature = temperature;
     double runningMag = magneticFieldH[magDir];
@@ -276,8 +279,8 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approachTemp, doub
     std::vector<double> rateVector(atomnum, 0.0);
     std::vector<double> acceptanceVector(atomnum, 0.0);
 
-    generateRandomVecArray(randomNumberVector3D);
-    generateAcceptanceVec(acceptanceVector);
+    //generateRandomVecArray(randomNumberVector3D);
+    //generateAcceptanceVec(acceptanceVector);
 
     std::vector<std::vector<double>> randomNumberVector3DSwap(atomnum, { 0.0 ,0.0 , 0.0 });
     std::vector<double> acceptanceVectorSwap(atomnum, 0.0);
@@ -291,7 +294,8 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approachTemp, doub
     energyHistory.resize(steps);
     std::future<double> energy;
 
-    int workerCount = 24;
+    int workerCount = 20;
+
     std::vector<std::vector<std::vector<double>>> magmomCopy;
     for (int i = 0; i < workerCount; i++)
     {
@@ -304,18 +308,38 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approachTemp, doub
 
     auto mcWorker = [&](std::stop_token stopToken, double& beta, std::vector<std::vector<double>> &magmoms, std::vector<std::vector<double>>& randomNumberVector3D, std::vector<double> &acceptanceVector, int start, int end)
     {
+        std::uniform_real_distribution<> randomizer(0.0, 1.0);
+        std::random_device randDevice;
+        std::mt19937 generator(randDevice());
+        auto atomlinks = links;
+        double rate = 0.0;
+        double acceptor = 0.0;
+        std::vector<std::vector<double>> randomVec = { {0.0,0.0,0.0} };
+        generateRandomVecArray(randomVec, randomizer, generator);
+
         syncPointInit.arrive_and_wait();
         while (!stopToken.stop_requested())
         {
             for (int i = start; i < end; ++i)
-                if (acceptanceVector[i] < rate_calculator(i, beta, magmoms[i], randomNumberVector3D[i], magmoms))
+            {
+                generateRandomVecArray(randomVec, randomizer, generator);
+                acceptor = randomizer(generator);
+                rate = rate_calculator(i, beta, magmoms[i], randomVec[0], magmoms, atomlinks);
+                if (acceptor < rate)
                 {
-                    magmoms[i] = randomNumberVector3D[i];
+                    magmoms[i][0] = randomVec[0][0];
+                    magmoms[i][1] = randomVec[0][1];
+                    magmoms[i][2] = randomVec[0][2];
                 }
+            }
             syncPointRun.arrive_and_wait();
             for (auto& magmomEntry : magmomCopy)
                 for (int i = start; i < end; ++i)
-                    magmomEntry[i] = magmoms[i];
+                {
+                    magmomEntry[i][0] = magmoms[i][0];
+                    magmomEntry[i][1] = magmoms[i][1];
+                    magmomEntry[i][2] = magmoms[i][2];
+                }
             syncPointRun.arrive_and_wait();
         }
     };
@@ -334,19 +358,22 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approachTemp, doub
     {
         if (step % statusSteps == 0)
         {
-            auto currenttime = getCurrentTime();
+            auto currenttime = std::chrono::high_resolution_clock::now();
+            auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(currenttime - lasttime);
             if (measurement)
-                tlog << getCurrentTime().time_string << " [Kernel] Currently at step " << step << " of " << steps << " in measurement mode. Last 100 steps took: " 
-                << currenttime.unix_time - lasttime.unix_time << " seconds!" << std::endl;
+                tlog << getCurrentTime().time_string << " [Kernel] Currently at step " << step << " of " << steps << " in measurement mode. Last " << statusSteps << " steps took: "
+                << duration.count() << " ms!" << std::endl;
             else if (approachTemp)
                 tlog << getCurrentTime().time_string << " [Kernel] Currently at step " << step << " / " << steps << " in approachTemp mode. Current temperature is " 
-                << runningTemperature << "K !" << std::endl;
+                << runningTemperature << "K !" << " Last " << statusSteps << " steps took : "
+                << duration.count() << " ms!" << std::endl;
             else if (approachMag)
                 tlog << getCurrentTime().time_string << " [Kernel] Currently at step " << step << " / " << steps << " in approachMag mode. Current Magnetic Field is "
-                << magneticFieldH[magDir] << "T !" << std::endl;
+                << magneticFieldH[magDir] << "T !" << " Last " << statusSteps << " steps took : "
+                << duration.count() << " ms!" << std::endl;
             else
-                tlog << getCurrentTime().time_string << " [Kernel] Currently at step " << step << " / " << steps << " in equilib mode. Last 100 steps took: "
-                << currenttime.unix_time - lasttime.unix_time << " seconds!" << std::endl;
+                tlog << getCurrentTime().time_string << " [Kernel] Currently at step " << step << " / " << steps << " in equilib mode. Last " << statusSteps << " steps took : "
+                << duration.count() << " ms!" << std::endl;
             lasttime = currenttime;
         }
         if (measurement)
@@ -381,13 +408,13 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approachTemp, doub
         if (measurement && step != 1)
             energyHistory[step - 1] = energy.get();
 
-        generateRandomVecArray(randomNumberVector3DSwap);
-        generateAcceptanceVec(acceptanceVectorSwap);
+        //generateRandomVecArray(randomNumberVector3DSwap);
+        //generateAcceptanceVec(acceptanceVectorSwap);
 
         syncPointRun.arrive_and_wait();
 
-        randomNumberVector3D.swap(randomNumberVector3DSwap);
-        acceptanceVector.swap(acceptanceVectorSwap);
+        //randomNumberVector3D.swap(randomNumberVector3DSwap);
+        //acceptanceVector.swap(acceptanceVectorSwap);
 
         /*
         //Parallel Way
@@ -478,13 +505,13 @@ std::string SimEnvironment::getOutputPath()
     return outputPath;
 }
 
-double SimEnvironment::energy_diff_calculator(const int& index, const std::vector<double>& oldMom, const std::vector<double>& newMom, const std::vector<std::vector<double>>& magmoms)
+double SimEnvironment::energy_diff_calculator(const int& index, const std::vector<double>& oldMom, const std::vector<double>& newMom, const std::vector<std::vector<double>>& magmoms, const std::vector<std::vector<std::tuple<int, double>>>& atomlinks)
 {
     double Hold = 0.0;
     double Hnew = 0.0;
     int link;
     double param, sum;
-    for (auto linkforatom : links[index])
+    for (const auto& linkforatom : atomlinks[index])
     {
         link = std::get<0>(linkforatom);
         param = std::get<1>(linkforatom);
@@ -493,6 +520,7 @@ double SimEnvironment::energy_diff_calculator(const int& index, const std::vecto
         dotProduct(sum, newMom, magmoms[link]);
         Hnew -= sum * param;
     }
+
     // Single Ion anisotropy + Zeeman Term
     for (int i = 0; i < 3; i++)
     {
@@ -514,9 +542,9 @@ double SimEnvironment::energy_diff_calculator(const int& index, const std::vecto
     return Hnew - Hold;
 }
 
-double SimEnvironment::rate_calculator(int& index, double& beta, std::vector<double>& oldMom, std::vector<double>& newMom, const std::vector<std::vector<double>>& magmoms)
+double SimEnvironment::rate_calculator(int& index, double& beta, std::vector<double>& oldMom, std::vector<double>& newMom, const std::vector<std::vector<double>>& magmoms,const std::vector<std::vector<std::tuple<int, double>>>& atomlinks)
 {
-    return std::exp(-energy_diff_calculator(index, oldMom, newMom, magmoms) * beta);
+    return std::exp(-energy_diff_calculator(index, oldMom, newMom, magmoms, atomlinks) * beta);
 }
 
 double SimEnvironment::energy_calculator()
@@ -580,18 +608,17 @@ std::vector<double> SimEnvironment::generateRandomVecSingle()
 
 }
 
-void SimEnvironment::generateRandomVecArray(std::vector<std::vector<double>>& vecIn)
+void SimEnvironment::generateRandomVecArray(std::vector<std::vector<double>>& vecIn, std::uniform_real_distribution<>& randomizer, std::mt19937& generator)
 {
     double C1, C2, Csq;
 
-    std::uniform_real_distribution<> ran(0.0, 1.0);
     for (int i = 0; i < vecIn.size(); i++)
     {
         Csq = 2;
         while (Csq >= 1)
         {
-            C1 = 1.0 - 2.0 * ran(gen);
-            C2 = 1.0 - 2.0 * ran(gen);
+            C1 = 1.0 - 2.0 * randomizer(generator);
+            C2 = 1.0 - 2.0 * randomizer(generator);
             Csq = C1 * C1 + C2 * C2;
         }
         vecIn[i][0] = 2 * C1 * std::sqrt((1 - Csq));

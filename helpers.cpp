@@ -1,6 +1,5 @@
 #include "helpers.h"
 
-
 static void show_usage(std::string name)
 {
     std::cerr << "Usage of this program:" << std::endl
@@ -151,11 +150,6 @@ int read_args(int argc, char* argv[], std::string& input, std::string& output, d
         return 2;
     }
     return 0;
-}
-
-
-void dotProduct(double &sum, const std::vector<double>& vec1, const std::vector<double>& vec2) {
-    sum = vec1[0] * vec2[0] + vec1[1] * vec2[1] + vec1[2] * vec2[2];
 }
 
 
