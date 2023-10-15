@@ -26,7 +26,8 @@ ScriptOption stringToOptionEnum(const std::string& str) {
         {"EQUILIB", ScriptOption::EQUILIB},
         {"MEASUREMENT", ScriptOption::MEASUREMENT},
         {"SWEEPTEMP", ScriptOption::SWEEPTEMP},
-        {"SWEEPMAG", ScriptOption::SWEEPMAG}
+        {"SWEEPMAG", ScriptOption::SWEEPMAG},
+        {"SETEASYPLANE", ScriptOption::SETEASYPLANE}
     };
 
     auto it = strToEnumMap.find(str);
@@ -156,9 +157,15 @@ void ScriptHandler::validateScript()
                 break;
             case(ScriptOption::SETMAGFIELD):
                 if (command.size() != 3) { validcheck_ = false; print("COMMAND SETMAGFIELD INVALID"); }
-                if (!canBeConvertedToDouble(command[1])) { validcheck_ = false; print("COMMAND SETMAGFIELD: FIELDSTRENGTH IS NOT VALID "); }
+                if (!canBeConvertedToDouble(command[1])) { validcheck_ = false; print("COMMAND SETMAGFIELD: FIELD STRENGTH IS NOT VALID "); }
                 if (!(command[2] == "X")) { print("HERE"); }
-                if (command[2] != "X" && command[2] != "Y" && command[2] != "Z") { validcheck_ = false; print("COMMAND SETMAGFIELD: FIELDDIRECTION IS NOT VALID "); }
+                if (command[2] != "X" && command[2] != "Y" && command[2] != "Z") { validcheck_ = false; print("COMMAND SETMAGFIELD: FIELD DIRECTION IS NOT VALID "); }
+                break;
+            case(ScriptOption::SETEASYPLANE):
+                if (command.size() != 3) { validcheck_ = false; print("COMMAND SETEASYPLANE INVALID"); }
+                if (!canBeConvertedToDouble(command[1])) { validcheck_ = false; print("COMMAND SETEASYPLANE: INTERACTION STRENGTH IS NOT VALID "); }
+                if (!(command[2] == "X")) { print("HERE"); }
+                if (command[2] != "X" && command[2] != "Y" && command[2] != "Z") { validcheck_ = false; print("COMMAND SETEASYPLANE: INTERACTION DIRECTION IS NOT VALID "); }
                 break;
             case(ScriptOption::APPROACHTEMP):
                 if (command.size() != 3) { validcheck_ = false; print("COMMAND APPROACHTEMP INVALID"); }
@@ -237,6 +244,14 @@ void ScriptHandler::runScript()
                 simRunner_.SETMAGFIELD(std::stod(command[1]), XYZ::Y);
             if (command[2] == "Z")
                 simRunner_.SETMAGFIELD(std::stod(command[1]), XYZ::Z);
+            break;
+        case(ScriptOption::SETEASYPLANE):
+            if (command[2] == "X")
+                simRunner_.SETEASYPLANE(std::stod(command[1]), XYZ::X);
+            if (command[2] == "Y")
+                simRunner_.SETEASYPLANE(std::stod(command[1]), XYZ::Y);
+            if (command[2] == "Z")
+                simRunner_.SETEASYPLANE(std::stod(command[1]), XYZ::Z);
             break;
         case(ScriptOption::APPROACHTEMP):
             simRunner_.APPROACHTEMP(std::stod(command[1]), std::stoi(command[2]));

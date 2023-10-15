@@ -76,6 +76,7 @@ public:
 	void runSim(int steps, bool measurement, bool approachTemp = 0, double initialtemp = 300, bool approachMag = 0, double initialH = 0.0);
 	void setTemperature(double temp);
     void setMagneticField(double xH, double yH, double zH);
+    void setSingleIonAnisotropy(double xC, double yC, double zC);
     void setOutputPath(std::string out);
 
     void setStatusSteps(int steps);
@@ -113,10 +114,11 @@ private:
 
 	const double kB = 8.617330337217213e-02; // meV/K
     const int MAXMAGMOMHISTSIZE = 300;
-    std::vector<double> interactionK;
-    std::vector<double> interactionC;
-    std::vector<double> magneticFieldH;
+    std::vector<double> singleIonAnisotropyTerm;
+    std::vector<double> compassAnisotropyTerm;
+    std::vector<double> zeemanTerm;
     int magDir;
+    int singleIonDir;
 
 	std::random_device rd;
 	std::mt19937 gen;

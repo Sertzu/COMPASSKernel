@@ -16,8 +16,12 @@ struct SimulationVariables
 	std::string outputPath = "";
 	int atomnum = 0;
 	double temperature = -1;
+
 	double HStrength = 0.0;
 	XYZ HDir = XYZ::X;
+
+	double CStrength = 0.0;
+	XYZ CDir = XYZ::X;
 
 	std::vector<std::vector<std::tuple<int, double>>> links;
 	std::vector<std::vector<std::vector<int>>> linksNN;
@@ -36,6 +40,8 @@ public:
 
 	void SETTEMP(double temp);
 	void SETMAGFIELD(double HVal, XYZ dir);
+
+	void SETEASYPLANE(double CVal, XYZ dir);
 
 	void APPROACHTEMP(double temperature, int steps);
 

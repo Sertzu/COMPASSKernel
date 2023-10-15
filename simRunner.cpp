@@ -56,6 +56,23 @@ void SimRunner::SETMAGFIELD(double HVal, XYZ dir)
 	print("ENVIRONMENT MAGNETIC FIELD SET TO: " + std::to_string(simVars.HStrength) + "T, IN DIRECTION: " + dirString);
 }
 
+void SimRunner::SETEASYPLANE(double CVal, XYZ dir)
+{
+	std::string dirString = "";
+
+	switch (dir) {
+	case XYZ::X: simEnv->setSingleIonAnisotropy(CVal, 0.0, 0.0); dirString = "X"; break;
+	case XYZ::Y: simEnv->setSingleIonAnisotropy(0.0, CVal, 0.0); dirString = "Y"; break;
+	case XYZ::Z: simEnv->setSingleIonAnisotropy(0.0, 0.0, CVal); dirString = "Z"; break;
+	default: throw std::runtime_error("Invalid direction for the easy plane anisotropy: ONLY X, Y, Z directions allowed");
+	}
+
+	simVars.CDir = dir;
+	simVars.CStrength = CVal;
+
+	print("ENVIRONMENT EASY PLANE INTERACTION SET TO: " + std::to_string(simVars.CStrength) + " IN DIRECTION: " + dirString);
+}
+
 void SimRunner::APPROACHTEMP(double temperature, int steps)
 {
 	if (simVars.isInit)

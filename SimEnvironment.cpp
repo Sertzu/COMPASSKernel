@@ -42,17 +42,18 @@ std::tuple<int, int, double, bool, bool, bool> extractLinks(const std::string& l
     bool isNearestNeighbourX = false;
     bool isNearestNeighbourY = false;
     bool isNearestNeighbourZ = false;
-    /*
-    if((abs(static_cast<int>(values[12])) + abs(static_cast<int>(values[13])) + abs(static_cast<int>(values[14]))) < 2)
-    {
-        if (abs(static_cast<int>(values[12])) == 1)
-            isNearestNeighbourX = true;
-        if (abs(static_cast<int>(values[13])) == 1)
-            isNearestNeighbourY = true;
-        if (abs(static_cast<int>(values[14])) == 1)
-            isNearestNeighbourZ = true;
-    }
-    */
+    
+    if(values.size() == 15)
+        if((abs(static_cast<int>(values[12])) + abs(static_cast<int>(values[13])) + abs(static_cast<int>(values[14]))) < 2)
+        {
+            if (abs(static_cast<int>(values[12])) == 1)
+                isNearestNeighbourX = true;
+            if (abs(static_cast<int>(values[13])) == 1)
+                isNearestNeighbourY = true;
+            if (abs(static_cast<int>(values[14])) == 1)
+                isNearestNeighbourZ = true;
+        }
+    
     return std::make_tuple(first, third, last, isNearestNeighbourX, isNearestNeighbourY, isNearestNeighbourZ);
 }
 
@@ -130,9 +131,9 @@ SimEnvironment::SimEnvironment(std::string input, std::string output, double tem
         atomCoordinates[std::get<0>(coords) - 1] = coords;
 
     }
-    interactionK = { 0.0, 0.0, 0.0 };
-    interactionC = { 0.0, 0.0, 0.0 };
-    magneticFieldH = { 0.0, 0.0, 0.0 };
+    singleIonAnisotropyTerm = { 0.0, 0.0, 0.0 };
+    compassAnisotropyTerm = { 0.0, 0.0, 0.0 };
+    zeemanTerm = { 0.0, 0.0, 0.0 };
     tlog << getCurrentTime().time_string << " [SimEnvironment] Initializing magnetic moments!" << std::endl;
     magmoms.reserve(atomnum);
     for (int i = 0; i < atomnum; i++)
@@ -183,7 +184,7 @@ SimEnvironment::SimEnvironment(std::string input, std::string output, double tem
 
         atomCoordinates[std::get<0>(coords) - 1] = coords;
     }
-    interactionK = { 0.0, 0.0, 0.0 };
+    singleIonAnisotropyTerm = { 0.0, 0.0, 0.0 };
     atomnum = links.size();
     tlog << getCurrentTime().time_string << " [SimEnvironment] Initializing magnetic moments!" << std::endl;
     for (int i = 0; i < atomnum; i++)
@@ -205,9 +206,9 @@ SimEnvironment::SimEnvironment(std::string input, std::string output, double tem
     tlog << getCurrentTime().time_string << " [SimEnvironment] Using links from reference!" << input << std::endl;
     links = linksIn;
     linksNN = linksNNIn;
-    interactionK = interactionKZIn;
-    interactionC = interactionCIn;
-    magneticFieldH = magneticFieldHIn;
+    singleIonAnisotropyTerm = interactionKZIn;
+    compassAnisotropyTerm = interactionCIn;
+    zeemanTerm = magneticFieldHIn;
     atomCoordinates = atomCoordinatesIn;
     atomnum = links.size();
     tlog << getCurrentTime().time_string << " [SimEnvironment] Initializing magnetic moments!" << std::endl;
@@ -219,7 +220,7 @@ SimEnvironment::SimEnvironment(std::string input, std::string output, double tem
     }
     else
         magmoms = magmomsIn;
-    if ((abs(interactionC[0]) + abs(interactionC[0]) + abs(interactionC[0])) < 1e-8)
+    if ((abs(compassAnisotropyTerm[0]) + abs(compassAnisotropyTerm[0]) + abs(compassAnisotropyTerm[0])) < 1e-8)
         enableCompassAnisotropy = true;
     else
         enableCompassAnisotropy = false;
@@ -260,7 +261,7 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approachTemp, doub
     auto lasttime = std::chrono::high_resolution_clock::now();
     double approachValue;
     double runningTemperature = temperature;
-    double runningMag = magneticFieldH[magDir];
+    double runningMag = zeemanTerm[magDir];
     if (approachTemp)
     {
         runningTemperature = initialtemp;
@@ -270,8 +271,8 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approachTemp, doub
     else if (approachMag)
     {
         runningMag = initialH;
-        approachValue = (magneticFieldH[magDir] - initialH) / steps;
-        magneticFieldH[magDir] = runningMag;
+        approachValue = (zeemanTerm[magDir] - initialH) / steps;
+        zeemanTerm[magDir] = runningMag;
         tlog << getCurrentTime().time_string << " [Kernel] Initial Magnetic Field is " << initialH << "T and Approachvalue is " << approachValue << std::endl;
     }
 
@@ -294,7 +295,7 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approachTemp, doub
     energyHistory.resize(steps);
     std::future<double> energy;
 
-    int workerCount = 20;
+    int workerCount = 12;
 
     std::vector<std::vector<std::vector<double>>> magmomCopy;
     for (int i = 0; i < workerCount; i++)
@@ -369,7 +370,7 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approachTemp, doub
                 << duration.count() << " ms!" << std::endl;
             else if (approachMag)
                 tlog << getCurrentTime().time_string << " [Kernel] Currently at step " << step << " / " << steps << " in approachMag mode. Current Magnetic Field is "
-                << magneticFieldH[magDir] << "T !" << " Last " << statusSteps << " steps took : "
+                << zeemanTerm[magDir] << "T !" << " Last " << statusSteps << " steps took : "
                 << duration.count() << " ms!" << std::endl;
             else
                 tlog << getCurrentTime().time_string << " [Kernel] Currently at step " << step << " / " << steps << " in equilib mode. Last " << statusSteps << " steps took : "
@@ -450,7 +451,7 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approachTemp, doub
         else if (approachMag)
         {
             runningMag += approachValue;
-            magneticFieldH[magDir] = runningMag;
+            zeemanTerm[magDir] = runningMag;
         }
 
         if(step == steps)
@@ -485,9 +486,25 @@ void SimEnvironment::setMagneticField(double xH, double yH, double zH)
     else
         magDir = -1;
 
-    magneticFieldH[0] = xH;
-    magneticFieldH[1] = yH;
-    magneticFieldH[2] = zH;
+    zeemanTerm[0] = xH;
+    zeemanTerm[1] = yH;
+    zeemanTerm[2] = zH;
+}
+
+void SimEnvironment::setSingleIonAnisotropy(double xC, double yC, double zC)
+{
+    if (abs(xC) > 0.00001)
+        singleIonDir = 0;
+    else if (abs(yC) > 0.00001)
+        singleIonDir = 1;
+    else if (abs(zC) > 0.00001)
+        singleIonDir = 2;
+    else
+        singleIonDir = -1;
+
+    singleIonAnisotropyTerm[0] = xC;
+    singleIonAnisotropyTerm[1] = yC;
+    singleIonAnisotropyTerm[2] = zC;
 }
 
 void SimEnvironment::setOutputPath(std::string out)
@@ -524,19 +541,21 @@ double SimEnvironment::energy_diff_calculator(const int& index, const std::vecto
     // Single Ion anisotropy + Zeeman Term
     for (int i = 0; i < 3; i++)
     {
-        Hold -= oldMom[i] * oldMom[i] * interactionK[i];
-        Hnew -= newMom[i] * newMom[i] * interactionK[i];
+        Hold -= oldMom[i] * oldMom[i] * singleIonAnisotropyTerm[i];
+        Hnew -= newMom[i] * newMom[i] * singleIonAnisotropyTerm[i];
 
-        Hold -= oldMom[i] * magneticFieldH[i];
-        Hnew -= newMom[i] * magneticFieldH[i];
+        // 0.672 -> unity conversion factor mu_B/k_B https://pubs.aip.org/aip/adv/article/5/12/127124/661186/Modeling-of-hysteresis-loops-by-Monte-Carlo
+
+        Hold -= oldMom[i] * zeemanTerm[i] * 0.672;
+        Hnew -= newMom[i] * zeemanTerm[i] * 0.672;
     }
     // Compass anisotropy
     if(enableCompassAnisotropy)
         for(int i = 0; i < 3; i++)
             for (auto linkforatom : linksNN[i][index])
             {
-                Hold -= oldMom[i] * magmoms[linkforatom][i] * interactionC[i];
-                Hnew -= newMom[i] * magmoms[linkforatom][i] * interactionC[i];
+                Hold -= oldMom[i] * magmoms[linkforatom][i] * compassAnisotropyTerm[i];
+                Hnew -= newMom[i] * magmoms[linkforatom][i] * compassAnisotropyTerm[i];
             }
 
     return Hnew - Hold;
@@ -571,9 +590,10 @@ double SimEnvironment::energy_calculator()
                 // Single Ion anisotropy + Zeeman Term
                 for (int j = 0; j < 3; j++)
                 {
-                    tempEnergy -= magmoms[i][j] * magmoms[i][j] * interactionK[j];
+                    tempEnergy -= magmoms[i][j] * magmoms[i][j] * singleIonAnisotropyTerm[j];
 
-                    tempEnergy -= magmoms[i][j] * magneticFieldH[j];
+                    // 0.672 -> unity conversion factor mu_B/k_B https://pubs.aip.org/aip/adv/article/5/12/127124/661186/Modeling-of-hysteresis-loops-by-Monte-Carlo
+                    tempEnergy -= magmoms[i][j] * zeemanTerm[j] * 0.672; 
                 }
             }
             energyLock.lock();
@@ -675,9 +695,9 @@ std::vector<double> SimEnvironment::getParameters()
     tlog << getCurrentTime().time_string << " [SimEnvironment] HeatCapacity: " << HeatCapacity << std::endl;
     tlog << getCurrentTime().time_string << " [SimEnvironment] Kumulante of the fourth order: " << U4 << std::endl << std::endl;
 
-    auto magtotal = magneticFieldH[0] + magneticFieldH[1] + magneticFieldH[2];
+    auto magtotal = zeemanTerm[0] + zeemanTerm[1] + zeemanTerm[2];
 
-    std::vector<double> returnVals = { temperature, MagMom, Chi, U4, E, HeatCapacity, interactionK[2], magtotal };
+    std::vector<double> returnVals = { temperature, MagMom, Chi, U4, E, HeatCapacity, singleIonAnisotropyTerm[2], magtotal };
     return returnVals;
 }
 
@@ -685,15 +705,15 @@ void SimEnvironment::writeMagneticMomentsToFile()
 {
     // Open the output file
     std::ostringstream KString;
-    KString << std::scientific << std::setprecision(1) << interactionK[2];
+    KString << std::scientific << std::setprecision(1) << singleIonAnisotropyTerm[0] + singleIonAnisotropyTerm[1] + singleIonAnisotropyTerm[2];
     std::string interactionKString = KString.str();
 
     std::ostringstream CString;
-    CString << std::scientific << std::setprecision(1) << interactionC[0];
+    CString << std::scientific << std::setprecision(1) << compassAnisotropyTerm[0];
     std::string interactionCString = CString.str();
 
     std::ostringstream HString;
-    HString << std::scientific << std::setprecision(1) << magneticFieldH[0] + magneticFieldH[1] + magneticFieldH[2];
+    HString << std::scientific << std::setprecision(1) << zeemanTerm[0] + zeemanTerm[1] + zeemanTerm[2];
     std::string magneticFieldHString = HString.str();
 
     std::ofstream outFile(joinPaths(outputPath, "endMagmoms_temp" + std::to_string(temperature) + "_K" + interactionKString + "_C" + interactionCString + "_H" + magneticFieldHString + ".magres"));

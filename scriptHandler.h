@@ -20,6 +20,7 @@ enum class ScriptOption {
     MEASUREMENT,
     SWEEPTEMP,
     SWEEPMAG,
+    SETEASYPLANE,
 
     INVALID
 };
