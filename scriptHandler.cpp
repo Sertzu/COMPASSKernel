@@ -19,6 +19,8 @@ ScriptOption stringToOptionEnum(const std::string& str) {
         {"LOAD", ScriptOption::LOAD},
         {"SETOUT", ScriptOption::SETOUT},
         {"LOADCHECKPOINT", ScriptOption::LOADCHECKPOINT},
+        {"SAVECHECKPOINT", ScriptOption::SAVECHECKPOINT},
+        {"SETMAGMOMAUTOSAVE", ScriptOption::SETMAGMOMAUTOSAVE},
         {"SETTEMP", ScriptOption::SETTEMP},
         {"SETMAGFIELD", ScriptOption::SETMAGFIELD},
         {"APPROACHTEMP", ScriptOption::APPROACHTEMP},
@@ -151,6 +153,12 @@ void ScriptHandler::validateScript()
             case(ScriptOption::LOADCHECKPOINT):
                 if (command.size() != 2) { validcheck_ = false; print("COMMAND LOADCHECKPOINT INVALID"); }
                 break;
+            case(ScriptOption::SAVECHECKPOINT):
+                if (command.size() != 2) { validcheck_ = false; print("COMMAND SAVECHECKPOINT INVALID"); }
+                break; 
+            case(ScriptOption::SETMAGMOMAUTOSAVE):
+                if (command.size() != 2) { validcheck_ = false; print("COMMAND SETMAGMOMAUTOSAVE INVALID"); }
+                break;
             case(ScriptOption::SETTEMP):
                 if (command.size() != 2) { validcheck_ = false; print("COMMAND SETTEMP INVALID"); }
                 if (!canBeConvertedToDouble(command[1])) { validcheck_ = false; print("COMMAND SETTEMP: TEMPERATURE IS NOT VALID "); }
@@ -233,6 +241,12 @@ void ScriptHandler::runScript()
             break;
         case(ScriptOption::LOADCHECKPOINT):
             //simRunner_.LOADCHECKPOINT(command[1]);
+            break;
+        case(ScriptOption::SETMAGMOMAUTOSAVE):
+            simRunner_.SETMAGMOMAUTOSAVE(command[1]);
+            break;
+        case(ScriptOption::SAVECHECKPOINT):
+            simRunner_.SAVECHECKPOINT(command[1]);
             break;
         case(ScriptOption::SETTEMP):
             simRunner_.SETTEMP(std::stod(command[1]));

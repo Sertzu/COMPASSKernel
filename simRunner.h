@@ -17,6 +17,9 @@ struct SimulationVariables
 	int atomnum = 0;
 	double temperature = -1;
 
+	std::string momentsPath = "";
+	bool autoSaveMoments = false;
+
 	double HStrength = 0.0;
 	XYZ HDir = XYZ::X;
 
@@ -36,7 +39,9 @@ public:
 
 	void LOAD(std::string inputFile = "");
 	void SETOUT(std::string outFile = "");
-	void LOADCHECKPOINT(std::string outFile = "");
+	void LOADCHECKPOINT(std::string outPath = "");
+	void SAVECHECKPOINT(std::string outPath = "");
+	void SETMAGMOMAUTOSAVE(std::string outPath = "");
 
 	void SETTEMP(double temp);
 	void SETMAGFIELD(double HVal, XYZ dir);

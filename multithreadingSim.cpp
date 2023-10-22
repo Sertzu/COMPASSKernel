@@ -26,7 +26,7 @@ void run_sim_thread(unsigned int threadnum, std::string inputPath, std::string o
     std::cout << getCurrentTime().time_string << " [Thread Handler] Finished simulation in thread:  " << threadnum << std::endl;
     lock.unlock();
     std::cout << getCurrentTime().time_string << " [Thread Handler] Dumping magmoms from thread: " << threadnum << std::endl;
-    myEnvironment.writeMagneticMomentsToFile();
+    myEnvironment.writeMagneticMomentsToFile("resultsMom");
     
 }
 
@@ -92,7 +92,7 @@ void run_sim_thread_wset(unsigned int threadnum, SettingsClass &simSettings, Sim
     std::cout << getCurrentTime().time_string << " [Thread Handler] Finished simulation in thread:  " << threadnum << std::endl;
     lock.unlock();
     std::cout << getCurrentTime().time_string << " [Thread Handler] Dumping magmoms from thread: " << threadnum << std::endl;
-    myEnvironment.writeMagneticMomentsToFile();
+    myEnvironment.writeMagneticMomentsToFile("resultsMom");
 
 }
 

@@ -31,6 +31,21 @@ void SimRunner::SETOUT(std::string outFile)
 	print("ENVIRONMENT OUTPUT SET TO FILE: " + simVars.outputPath);
 }
 
+void SimRunner::SAVECHECKPOINT(std::string outPath)
+{
+	simEnv->writeMagneticMomentsToFile(outPath);
+
+	print("ENVIRONMENT SAVED MAGMOMS TO: " + outPath);
+}
+
+void SimRunner::SETMAGMOMAUTOSAVE(std::string outPath)
+{
+	simVars.autoSaveMoments = true;
+	simVars.momentsPath = outPath;
+
+	print("ENVIRONMENT WILL AUTOSAVE MAGMOMS TO: " + outPath);
+}
+
 void SimRunner::SETTEMP(double temp)
 {
 	simVars.temperature = temp;
@@ -122,6 +137,8 @@ void SimRunner::MEASUREMENT(int steps)
 	simEnv->runSim(steps, true);
 
 	saveMeasurement(simEnv->getParameters());
+	if (simVars.autoSaveMoments)
+		simEnv->writeMagneticMomentsToFile(simVars.momentsPath);
 }
 
 void SimRunner::SWEEPTEMP(double targetTemp, double tempSteps, int approachSteps, int equilibSteps, int measurementSteps)

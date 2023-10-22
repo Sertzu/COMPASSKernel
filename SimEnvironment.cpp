@@ -1,4 +1,7 @@
 #include "SimEnvironment.h"
+#include <filesystem> // Requires C++17
+
+namespace fs = std::filesystem;
 
 inline void dotProduct(double& sum, const std::vector<double>& vec1, const std::vector<double>& vec2) {
     sum = vec1[0] * vec2[0] + vec1[1] * vec2[1] + vec1[2] * vec2[2];
@@ -701,7 +704,7 @@ std::vector<double> SimEnvironment::getParameters()
     return returnVals;
 }
 
-void SimEnvironment::writeMagneticMomentsToFile()
+void SimEnvironment::writeMagneticMomentsToFile(std::string path)
 {
     // Open the output file
     std::ostringstream KString;
@@ -716,7 +719,13 @@ void SimEnvironment::writeMagneticMomentsToFile()
     HString << std::scientific << std::setprecision(1) << zeemanTerm[0] + zeemanTerm[1] + zeemanTerm[2];
     std::string magneticFieldHString = HString.str();
 
-    std::ofstream outFile(joinPaths(outputPath, "endMagmoms_temp" + std::to_string(temperature) + "_K" + interactionKString + "_C" + interactionCString + "_H" + magneticFieldHString + ".magres"));
+
+    if (!fs::exists(path)) {
+        // The directory does not exist, create it
+        fs::create_directories(path);
+    }
+
+    std::ofstream outFile(joinPaths(path, "endMagmoms_temp" + std::to_string(temperature) + "_K" + interactionKString + "_C" + interactionCString + "_H" + magneticFieldHString + ".magres"));
     if (!outFile.is_open()) {
         std::cerr << "Failed to open the output file." << std::endl;
         return;

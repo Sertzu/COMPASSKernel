@@ -83,7 +83,7 @@ public:
 
 	std::string getOutputPath();
 	std::vector<double> getParameters();
-    void writeMagneticMomentsToFile();
+    void writeMagneticMomentsToFile(std::string path);
 private:
 
 	double energy_diff_calculator(const int& index,const std::vector<double>& oldMom,const std::vector<double>& newMom, const std::vector<std::vector<double>>& magmoms, const std::vector<std::vector<std::tuple<int, double>>>& atomlinks);
