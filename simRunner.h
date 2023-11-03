@@ -26,6 +26,9 @@ struct SimulationVariables
 	double CStrength = 0.0;
 	XYZ CDir = XYZ::X;
 
+	double CompStrength = 0.0;
+	XYZ CompDir = XYZ::X;
+
 	std::vector<std::vector<std::tuple<int, double>>> links;
 	std::vector<std::vector<std::vector<int>>> linksNN;
 	std::vector<std::vector<double>> magmoms;
@@ -47,6 +50,7 @@ public:
 	void SETMAGFIELD(double HVal, XYZ dir);
 
 	void SETEASYPLANE(double CVal, XYZ dir);
+	void SETCOMPASSANISO(double CompVal, XYZ dir);
 
 	void APPROACHTEMP(double temperature, int steps);
 

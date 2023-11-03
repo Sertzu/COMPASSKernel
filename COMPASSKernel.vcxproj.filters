@@ -76,7 +76,10 @@
     <None Include="inputs\SETTINGS.cfg">
       <Filter>Ressourcendateien</Filter>
     </None>
-    <None Include="inputs\testScriptBase.comps">
+    <None Include="inputs\ScriptCrSb.comps">
+      <Filter>Ressourcendateien</Filter>
+    </None>
+    <None Include="inputs\ScriptGdRu2Si2.comps">
       <Filter>Ressourcendateien</Filter>
     </None>
   </ItemGroup>

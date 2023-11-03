@@ -66,7 +66,7 @@ public:
     SimEnvironment();
 	SimEnvironment(std::string inputPath, std::string outputPath, double temperature);
 	SimEnvironment(std::string inputPath, std::string outputPath, double temperature, unsigned int threadnum);
-    SimEnvironment(std::string inputPath, std::string outputPath, double temperature, unsigned int threadnum, const std::vector<std::vector<std::tuple<int, double>>>& links, const std::vector<std::tuple<int, std::vector<double>>>& atomCoordinates, const std::vector<std::vector<std::vector<int>>>& linksNN, std::vector<double> interactionKZ = { 0.0, 0.0, 0.0 }, std::vector<double> interactionC = { 0.0, 0.0, 0.0 }, std::vector<std::vector<double>> magmoms = {}, std::vector<double> magneticFieldHIn = { 0.0, 0.0, 0.0 });
+    SimEnvironment(std::string inputPath, std::string outputPath, double temperature, unsigned int threadnum, const std::vector<std::vector<std::tuple<int, double>>>& links, const std::vector<std::tuple<int, std::vector<double>>>& atomCoordinates, const std::vector<std::vector<std::vector<int>>>& linksNN, std::vector<double> interactionComp = { 0.0, 0.0, 0.0 }, std::vector<double> interactionC = { 0.0, 0.0, 0.0 }, std::vector<std::vector<double>> magmoms = {}, std::vector<double> magneticFieldHIn = { 0.0, 0.0, 0.0 });
 
     std::vector<std::vector<std::tuple<int, double>>> getLinks();
     std::vector<std::vector<std::vector<int>>> getLinksNN();
@@ -75,8 +75,10 @@ public:
 
 	void runSim(int steps, bool measurement, bool approachTemp = 0, double initialtemp = 300, bool approachMag = 0, double initialH = 0.0);
 	void setTemperature(double temp);
+
     void setMagneticField(double xH, double yH, double zH);
     void setSingleIonAnisotropy(double xC, double yC, double zC);
+    void setCompassAnisotropy(double xComp, double yComp, double zComp);
     void setOutputPath(std::string out);
 
     void setStatusSteps(int steps);
@@ -119,6 +121,7 @@ private:
     std::vector<double> zeemanTerm;
     int magDir;
     int singleIonDir;
+    int compassDir;
 
 	std::random_device rd;
 	std::mt19937 gen;

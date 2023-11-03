@@ -23,6 +23,7 @@ enum class ScriptOption {
     SWEEPTEMP,
     SWEEPMAG,
     SETEASYPLANE,
+    SETCOMPASSANISO,
 
     INVALID
 };

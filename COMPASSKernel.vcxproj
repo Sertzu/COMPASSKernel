@@ -166,8 +166,9 @@
     <ClInclude Include="timeUtility.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="inputs\ScriptGdRu2Si2.comps" />
     <None Include="inputs\SETTINGS.cfg" />
-    <None Include="inputs\testScriptBase.comps" />
+    <None Include="inputs\ScriptCrSb.comps" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

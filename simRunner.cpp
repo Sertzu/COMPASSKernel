@@ -88,6 +88,23 @@ void SimRunner::SETEASYPLANE(double CVal, XYZ dir)
 	print("ENVIRONMENT EASY PLANE INTERACTION SET TO: " + std::to_string(simVars.CStrength) + " IN DIRECTION: " + dirString);
 }
 
+void SimRunner::SETCOMPASSANISO(double CompVal, XYZ dir)
+{
+	std::string dirString = "";
+
+	switch (dir) {
+	case XYZ::X: simEnv->setCompassAnisotropy(0.0, CompVal, CompVal); dirString = "X"; break;
+	case XYZ::Y: simEnv->setCompassAnisotropy(CompVal, 0.0, CompVal); dirString = "Y"; break;
+	case XYZ::Z: simEnv->setCompassAnisotropy(CompVal, CompVal, 0.0); dirString = "Z"; break;
+	default: throw std::runtime_error("Invalid direction for the compass anisotropy: ONLY X, Y, Z directions allowed");
+	}
+
+	simVars.CompDir = dir;
+	simVars.CompStrength = CompVal;
+
+	print("ENVIRONMENT COMPASS INTERACTION SET TO: " + std::to_string(simVars.CompStrength) + " IN NORMAL DIRECTION: " + dirString);
+}
+
 void SimRunner::APPROACHTEMP(double temperature, int steps)
 {
 	if (simVars.isInit)

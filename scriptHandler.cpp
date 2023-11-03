@@ -29,7 +29,8 @@ ScriptOption stringToOptionEnum(const std::string& str) {
         {"MEASUREMENT", ScriptOption::MEASUREMENT},
         {"SWEEPTEMP", ScriptOption::SWEEPTEMP},
         {"SWEEPMAG", ScriptOption::SWEEPMAG},
-        {"SETEASYPLANE", ScriptOption::SETEASYPLANE}
+        {"SETEASYPLANE", ScriptOption::SETEASYPLANE},
+        {"SETCOMPASSANISO", ScriptOption::SETCOMPASSANISO}
     };
 
     auto it = strToEnumMap.find(str);
@@ -172,8 +173,12 @@ void ScriptHandler::validateScript()
             case(ScriptOption::SETEASYPLANE):
                 if (command.size() != 3) { validcheck_ = false; print("COMMAND SETEASYPLANE INVALID"); }
                 if (!canBeConvertedToDouble(command[1])) { validcheck_ = false; print("COMMAND SETEASYPLANE: INTERACTION STRENGTH IS NOT VALID "); }
-                if (!(command[2] == "X")) { print("HERE"); }
                 if (command[2] != "X" && command[2] != "Y" && command[2] != "Z") { validcheck_ = false; print("COMMAND SETEASYPLANE: INTERACTION DIRECTION IS NOT VALID "); }
+                break;
+            case(ScriptOption::SETCOMPASSANISO):
+                if (command.size() != 3) { validcheck_ = false; print("COMMAND SETCOMPASSANISO INVALID"); }
+                if (!canBeConvertedToDouble(command[1])) { validcheck_ = false; print("COMMAND SETCOMPASSANISO: INTERACTION STRENGTH IS NOT VALID "); }
+                if (command[2] != "X" && command[2] != "Y" && command[2] != "Z") { validcheck_ = false; print("COMMAND SETCOMPASSANISO: INTERACTION DIRECTION IS NOT VALID "); }
                 break;
             case(ScriptOption::APPROACHTEMP):
                 if (command.size() != 3) { validcheck_ = false; print("COMMAND APPROACHTEMP INVALID"); }
@@ -266,6 +271,14 @@ void ScriptHandler::runScript()
                 simRunner_.SETEASYPLANE(std::stod(command[1]), XYZ::Y);
             if (command[2] == "Z")
                 simRunner_.SETEASYPLANE(std::stod(command[1]), XYZ::Z);
+            break;
+        case(ScriptOption::SETCOMPASSANISO):
+            if (command[2] == "X")
+                simRunner_.SETCOMPASSANISO(std::stod(command[1]), XYZ::X);
+            if (command[2] == "Y")
+                simRunner_.SETCOMPASSANISO(std::stod(command[1]), XYZ::Y);
+            if (command[2] == "Z")
+                simRunner_.SETCOMPASSANISO(std::stod(command[1]), XYZ::Z);
             break;
         case(ScriptOption::APPROACHTEMP):
             simRunner_.APPROACHTEMP(std::stod(command[1]), std::stoi(command[2]));

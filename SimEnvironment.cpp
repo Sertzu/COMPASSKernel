@@ -195,7 +195,7 @@ SimEnvironment::SimEnvironment(std::string input, std::string output, double tem
     tlog << getCurrentTime().time_string << " [SimEnvironment] Setup complete!" << std::endl << std::endl;
 }
 
-SimEnvironment::SimEnvironment(std::string input, std::string output, double temp, unsigned int threadnumber, const std::vector<std::vector<std::tuple<int, double>>> &linksIn, const std::vector<std::tuple<int, std::vector<double>>>& atomCoordinatesIn,const std::vector<std::vector<std::vector<int>>>& linksNNIn, std::vector<double> interactionKZIn, std::vector<double> interactionCIn, std::vector<std::vector<double>> magmomsIn, std::vector<double> magneticFieldHIn)
+SimEnvironment::SimEnvironment(std::string input, std::string output, double temp, unsigned int threadnumber, const std::vector<std::vector<std::tuple<int, double>>> &linksIn, const std::vector<std::tuple<int, std::vector<double>>>& atomCoordinatesIn,const std::vector<std::vector<std::vector<int>>>& linksNNIn, std::vector<double> interactionCompIn, std::vector<double> interactionCIn, std::vector<std::vector<double>> magmomsIn, std::vector<double> magneticFieldHIn)
 {
     threadnum = threadnumber;
     if (threadnum)
@@ -209,7 +209,7 @@ SimEnvironment::SimEnvironment(std::string input, std::string output, double tem
     tlog << getCurrentTime().time_string << " [SimEnvironment] Using links from reference!" << input << std::endl;
     links = linksIn;
     linksNN = linksNNIn;
-    singleIonAnisotropyTerm = interactionKZIn;
+    singleIonAnisotropyTerm = interactionCompIn;
     compassAnisotropyTerm = interactionCIn;
     zeemanTerm = magneticFieldHIn;
     atomCoordinates = atomCoordinatesIn;
@@ -508,6 +508,22 @@ void SimEnvironment::setSingleIonAnisotropy(double xC, double yC, double zC)
     singleIonAnisotropyTerm[0] = xC;
     singleIonAnisotropyTerm[1] = yC;
     singleIonAnisotropyTerm[2] = zC;
+}
+
+void SimEnvironment::setCompassAnisotropy(double xComp, double yComp, double zComp)
+{
+    if (abs(xComp) > 0.00001)
+        compassDir = 0;
+    else if (abs(yComp) > 0.00001)
+        compassDir = 1;
+    else if (abs(zComp) > 0.00001)
+        compassDir = 2;
+    else
+        compassDir = -1;
+
+    compassAnisotropyTerm[0] = xComp;
+    compassAnisotropyTerm[1] = yComp;
+    compassAnisotropyTerm[2] = zComp;
 }
 
 void SimEnvironment::setOutputPath(std::string out)
