@@ -154,26 +154,89 @@ int read_args(int argc, char* argv[], std::string& input, std::string& output, d
 
 
 void appendToFile(const std::string& filename, const std::string& data) {
-    std::ofstream file;
+    std::ofstream datFile;
 
+    std::string fullFileName = filename + ".dat";
     // Check if the file exists
-    bool fileExists = std::filesystem::exists(filename);
+    bool datFileExists = std::filesystem::exists(fullFileName);
 
-    if (fileExists) {
+    if (datFileExists) {
         // Open the file in append mode
-        file.open(filename, std::ios::app);
+        datFile.open(fullFileName, std::ios::app);
     }
     else {
         // Create a new file and add the header
-        file.open(filename, std::ios::out);
-        file << "# Temp         M          Chi        U4         E     HeatCapacity       K        H\n";
+        datFile.open(fullFileName, std::ios::out);
+        datFile << "# Temp         M          Chi        U4         E     HeatCapacity       K        H\n";
     }
 
     // Append the string
-    file << data << '\n';
+    datFile << data << '\n';
 
     // Close the file
-    file.close();
+    datFile.close();
+}
+
+void writeResultsToFile(const std::string& filename, const std::vector<double>& data) {
+    std::ofstream datFile;
+
+    std::string fullFileNameDat = filename + ".dat";
+    // Check if the file exists
+    bool datFileExists = std::filesystem::exists(fullFileNameDat);
+
+    if (datFileExists) {
+        // Open the file in append mode
+        datFile.open(fullFileNameDat, std::ios::app);
+    }
+    else {
+        // Create a new file and add the header
+        datFile.open(fullFileNameDat, std::ios::out);
+        datFile << "# Temp         M          Chi        U4         E     HeatCapacity       K        H\n";
+    }
+    std::string out(formatDouble(data[0], 9, 5) + "  " + formatDouble(data[1], 9, 5) + "  " + formatDouble(data[2], 9, 5) + "  " + formatDouble(data[3], 9, 5) + "  " + formatDouble(data[4], 9, 5) + "  " + formatDouble(data[5], 9, 5) + "  " + formatDouble(data[6], 9, 5) + "  " + formatDouble(data[7], 9, 5));
+    // Append the string
+    datFile << out << '\n';
+
+    // Close the file
+    datFile.close();
+
+    // Same for the csv file
+    std::ofstream csvFile;
+    std::string fullFileNameCsv = filename + ".csv";
+    bool csvFileExists = std::filesystem::exists(fullFileNameCsv);
+
+    if (csvFileExists) {
+        // Open the file in append mode
+        csvFile.open(fullFileNameCsv, std::ios::app);
+    }
+    else {
+        // Create a new file and add the header
+        csvFile.open(fullFileNameCsv, std::ios::out);
+        csvFile << "temperature;magnetization;chi;kumulantU4;energy;heatCapacity;singleIonAnisotropyTerm;magneticFieldStrength\n";
+    }
+    // Check if the file stream is open
+    if (csvFile.is_open()) {
+        // Iterate over the vector
+        for (size_t i = 0; i < data.size(); ++i) 
+        {
+            csvFile << data[i];
+
+            // Add a semicolon after each element except the last
+            if (i < data.size() - 1) 
+            {
+                csvFile << ";";
+            }
+            else
+            {
+                csvFile << "\n";
+            }
+        }
+    }
+    else {
+        std::cerr << "Unable to open file for writing." << std::endl;
+    }
+    // Close the file stream
+    csvFile.close();
 }
 
 std::string formatDouble(double value, int width, int precision) {

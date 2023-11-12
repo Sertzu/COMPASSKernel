@@ -225,7 +225,6 @@ void SimRunner::print(const std::string toPrint)
 void SimRunner::saveMeasurement(std::vector<double> outVals)
 {
 	print("SAVING MEASUREMENT TO FILE: " + simVars.outputPath);
-	std::string out(formatDouble(outVals[0], 9, 5) + "  " + formatDouble(outVals[1], 9, 5) + "  " + formatDouble(outVals[2], 9, 5) + "  " + formatDouble(outVals[3], 9, 5) + "  " + formatDouble(outVals[4], 9, 5) + "  " + formatDouble(outVals[5], 9, 5) + "  " + formatDouble(outVals[6], 9, 5) + "  " + formatDouble(outVals[7], 9, 5));
 
-	appendToFile(simVars.outputPath, out);
+	writeResultsToFile(simVars.outputPath, outVals);
 }

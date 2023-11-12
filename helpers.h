@@ -24,6 +24,7 @@ std::vector<std::pair<int, int>> splitArray(int x, int y);
 
 int read_args(int argc, char* argv[], std::string &input, std::string& output, double &temperature, int& equilibsteps, int& measuresteps);
 void appendToFile(const std::string& filename, const std::string& data);
+void writeResultsToFile(const std::string& filename, const std::vector<double>& data);
 std::string formatDouble(double value, int width, int precision);
 std::vector<double> generate_evenly_spaced_numbers(double a, double b, int n);
 void sort_file_by_first_entry(const std::string& filename);

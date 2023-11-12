@@ -14,7 +14,7 @@ std::vector<std::string> read_file_without_comments(const std::string& file_path
     if (input_file.is_open()) {
         std::string line;
         while (std::getline(input_file, line)) {
-            if (line.empty() || line[0] != '#') {
+            if (!(line.empty() || line[0] == '#' || line[0] == '!')) {
                 lines.push_back(line);
             }
         }
@@ -33,7 +33,6 @@ std::tuple<int, int, double, bool, bool, bool> extractLinks(const std::string& l
     double last;
     std::vector<double> values;
     double value;
-
     while (iss >> value) {
         values.push_back(value);
     }
