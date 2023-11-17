@@ -96,35 +96,37 @@ private:
     void generateAcceptanceVec(std::vector<double>& vecIn);
     void generateRandomVecArray(std::vector<std::vector<double>>& vecIn, std::uniform_real_distribution<>& randomizer, std::mt19937& generator);
 
-    ThreadLogger tlog;
-	unsigned int threadnum;
+    ThreadLogger m_tlog;
+	unsigned int m_threadnum;
 
-	std::vector<std::vector<std::tuple<int, double>>> links;
-    std::vector<std::vector<std::vector<int>>> linksNN;
-	std::vector<std::vector<double>> magmoms;
-    std::vector<std::tuple<int, std::vector<double>>> atomCoordinates;
+	std::vector<std::vector<std::tuple<int, double>>> m_links;
+    std::vector<std::vector<std::vector<int>>> m_linksNN;
+	std::vector<std::vector<double>> m_magmoms;
+    std::vector<std::tuple<int, std::vector<double>>> m_atomCoordinates;
+    std::vector<int> m_atomTypes;
 
-    std::vector<std::vector<std::vector<double>>> magmomsHistory;
-	std::vector<double> meanmagmomsHistory;
-	std::vector<double> energyHistory;
+    std::vector<std::vector<std::vector<double>>> m_magmomsHistory;
+	std::vector<double> m_meanmagmomsHistory;
+	std::vector<double> m_energyHistory;
 
-	std::string inputPath;
-	std::string outputPath;
-	int atomnum;
-	double temperature;
-    bool enableCompassAnisotropy;
+	std::string m_inputPath;
+	std::string m_outputPath;
+	int m_atomnum;
+	double m_temperature;
+    bool m_enableCompassAnisotropy;
+    bool m_useStaggeredMagnetization = false;
 
-	const double kB = 8.617330337217213e-02; // meV/K
-    const int MAXMAGMOMHISTSIZE = 300;
-    std::vector<double> singleIonAnisotropyTerm;
-    std::vector<double> compassAnisotropyTerm;
-    std::vector<double> zeemanTerm;
-    int magDir;
-    int singleIonDir;
-    int compassDir;
+	const double m_kB = 8.617330337217213e-02; // meV/K
+    const int m_MAXMAGMOMHISTSIZE = 300;
+    std::vector<double> m_singleIonAnisotropyTerm;
+    std::vector<double> m_compassAnisotropyTerm;
+    std::vector<double> m_zeemanTerm;
+    int m_magDir;
+    int m_singleIonDir;
+    int m_compassDir;
 
 	std::random_device rd;
 	std::mt19937 gen;
 	
-    int statusSteps = 1000;
+    int m_statusSteps = 1000;
 };

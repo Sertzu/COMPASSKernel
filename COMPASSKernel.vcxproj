@@ -157,6 +157,7 @@
   <ItemGroup>
     <ClInclude Include="BS_thread_pool.hpp" />
     <ClInclude Include="helpers.h" />
+    <ClInclude Include="json.hpp" />
     <ClInclude Include="MomentReader.h" />
     <ClInclude Include="multithreadingSim.h" />
     <ClInclude Include="scriptHandler.h" />

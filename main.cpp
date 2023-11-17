@@ -24,7 +24,7 @@ int main(int argc, char* argv[])
     scriptExecutor.runScript();
 
 
-    exit(1);
+    exit(0);
     SimRunner simRunner("inputs/SETTINGS.cfg");
     
     int stepsInit = 40000;
