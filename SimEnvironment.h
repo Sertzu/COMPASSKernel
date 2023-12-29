@@ -80,6 +80,7 @@ public:
     void setSingleIonAnisotropy(double xC, double yC, double zC);
     void setCompassAnisotropy(double xComp, double yComp, double zComp);
     void setOutputPath(std::string out);
+    void setMagPattern(std::vector<double> mag_pattern);
 
     void setStatusSteps(int steps);
 
@@ -98,6 +99,7 @@ private:
 
     ThreadLogger m_tlog;
 	unsigned int m_threadnum;
+    int m_workerCount = 6;
 
 	std::vector<std::vector<std::tuple<int, double>>> m_links;
     std::vector<std::vector<std::vector<int>>> m_linksNN;
@@ -115,6 +117,7 @@ private:
 	double m_temperature;
     bool m_enableCompassAnisotropy;
     bool m_useStaggeredMagnetization = false;
+    std::vector<double> m_magnetizationPattern;
 
 	const double m_kB = 8.617330337217213e-02; // meV/K
     const int m_MAXMAGMOMHISTSIZE = 300;

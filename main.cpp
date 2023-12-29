@@ -19,7 +19,7 @@ int main(int argc, char* argv[])
 {
     ScriptHandler scriptExecutor("inputs/SETTINGS.cfg");
     // scriptExecutor.loadScript("inputs/ScriptCrSb.comps");
-    scriptExecutor.loadScript("inputs/ScriptSrCoO3.comps");
+    scriptExecutor.loadScript("inputs/ScriptSFMO.comps");
     scriptExecutor.showScript();
     scriptExecutor.runScript();
 

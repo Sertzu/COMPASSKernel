@@ -30,7 +30,8 @@ ScriptOption stringToOptionEnum(const std::string& str) {
         {"SWEEPTEMP", ScriptOption::SWEEPTEMP},
         {"SWEEPMAG", ScriptOption::SWEEPMAG},
         {"SETEASYPLANE", ScriptOption::SETEASYPLANE},
-        {"SETCOMPASSANISO", ScriptOption::SETCOMPASSANISO}
+        {"SETCOMPASSANISO", ScriptOption::SETCOMPASSANISO},
+        {"SETMAGPATTERN", ScriptOption::SETMAGPATTERN}
     };
 
     auto it = strToEnumMap.find(str);
@@ -214,6 +215,24 @@ void ScriptHandler::validateScript()
                 if (!canBeConvertedToInt(command[4])) { validcheck_ = false; print("COMMAND SWEEPMAG: EQUILIBSTEPS IS NOT VALID "); }
                 if (!canBeConvertedToInt(command[5])) { validcheck_ = false; print("COMMAND SWEEPMAG: MEASUREMENTSTEPS IS NOT VALID "); }
                 break;
+            case(ScriptOption::SETMAGPATTERN):
+            {
+                bool first = true;
+                for (const auto& command_part : command)
+                {
+                    if (first)
+                    {
+                        first = false;
+                        continue;
+                    }
+                    if (!canBeConvertedToDouble(command_part))
+                    {
+                        validcheck_ = false;
+                        print("COMMAND SETMAGPATTERN: INVALID VALUE IN LIST");
+                    }
+                }
+                break;
+            }
             default:
                 validcheck_ = false;
         }
@@ -298,6 +317,16 @@ void ScriptHandler::runScript()
         case(ScriptOption::SWEEPMAG):
             simRunner_.SWEEPMAG(std::stod(command[1]), std::stod(command[2]), std::stoi(command[3]), std::stoi(command[4]), std::stoi(command[5]));
             break;
+        case(ScriptOption::SETMAGPATTERN):
+        {
+            std::vector<double> mag_pattern;
+            for (int i = 1; i < command.size(); i++)
+            {
+                mag_pattern.push_back(std::stod(command[i]));
+            }
+            simRunner_.SETMAGPATTERN(mag_pattern);
+            break;
+        }
         default:
             throw std::runtime_error("CRITICAL FAILURE IN THE SCRIPTRUNNER");
         }

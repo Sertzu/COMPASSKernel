@@ -167,6 +167,7 @@
     <ClInclude Include="timeUtility.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="inputs\ScriptSFMO.comps" />
     <None Include="inputs\ScriptSrCoO3.comps" />
     <None Include="inputs\ScriptGdRu2Si2.comps" />
     <None Include="inputs\SETTINGS.cfg" />

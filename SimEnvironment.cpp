@@ -300,17 +300,15 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approachTemp, doub
     m_energyHistory.resize(steps);
     std::future<double> energy;
 
-    int workerCount = 4;
-
     std::vector<std::vector<std::vector<double>>> magmomCopy;
-    for (int i = 0; i < workerCount; i++)
+    for (int i = 0; i < m_workerCount; i++)
     {
         magmomCopy.push_back(m_magmoms);
     }
-    auto startIndices = getStartIndices(m_magmoms.size(), workerCount);
+    auto startIndices = getStartIndices(m_magmoms.size(), m_workerCount);
 
-    std::barrier syncPointInit(workerCount + 1);
-    std::barrier syncPointRun(workerCount + 1);
+    std::barrier syncPointInit(m_workerCount + 1);
+    std::barrier syncPointRun(m_workerCount + 1);
 
     auto mcWorker = [&](std::stop_token stopToken, double& beta, std::vector<std::vector<double>> &magmoms, std::vector<std::vector<double>>& randomNumberVector3D, std::vector<double> &acceptanceVector, int start, int end)
     {
@@ -353,10 +351,10 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approachTemp, doub
     std::vector<std::jthread> mcWorkers;
     double beta = 1 / (m_kB * runningTemperature);
 
-    mcWorkers.reserve(workerCount);
-    for (int i = 0; i < workerCount; ++i) {
+    mcWorkers.reserve(m_workerCount);
+    for (int i = 0; i < m_workerCount; ++i) {
         int start = startIndices[i];
-        int end = (i == workerCount - 1) ? m_magmoms.size() : startIndices[i + 1];
+        int end = (i == m_workerCount - 1) ? m_magmoms.size() : startIndices[i + 1];
         mcWorkers.emplace_back(mcWorker, std::ref(beta), std::ref(magmomCopy[i]), std::ref(randomNumberVector3D),std::ref(acceptanceVector), start, end);
     }
 
@@ -389,17 +387,11 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approachTemp, doub
             double M2 = 0.0;
             double M3 = 0.0;
 
-            // For initial testing!
-            m_useStaggeredMagnetization = false;
-
             if(m_useStaggeredMagnetization)
             {
-                // For initial testing!
-                std::vector<double> magnetizationPattern = { 1., -1. };
-
                 for (int i = 0; i < m_atomnum; i++)
                 {
-                    double pattern = magnetizationPattern[m_atomTypes[i] - 1];
+                    double pattern = m_magnetizationPattern[m_atomTypes[i] - 1];
                     M1 += m_magmoms[i][0] * pattern;
                     M2 += m_magmoms[i][1] * pattern;
                     M3 += m_magmoms[i][2] * pattern;
@@ -551,6 +543,12 @@ void SimEnvironment::setCompassAnisotropy(double xComp, double yComp, double zCo
 void SimEnvironment::setOutputPath(std::string out)
 {
     m_outputPath = out;
+}
+
+void SimEnvironment::setMagPattern(std::vector<double> mag_pattern)
+{
+    m_magnetizationPattern = mag_pattern;
+    m_useStaggeredMagnetization = true;
 }
 
 void SimEnvironment::setStatusSteps(int steps)
@@ -776,7 +774,7 @@ void SimEnvironment::writeMagneticMomentsToFile(std::string path)
         }
         double sumx, sumy, sumz;
         double sumxnorm, sumynorm, sumznorm;
-        sumx = sumy = sumz = 0;
+        sumx = sumy = sumz = 0.;
         for (int j = 0; j < m_magmomsHistory.size(); j++) {
             sumx += m_magmomsHistory[j][i][0];
             sumy += m_magmomsHistory[j][i][1];

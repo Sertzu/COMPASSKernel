@@ -46,6 +46,13 @@ void SimRunner::SETMAGMOMAUTOSAVE(std::string outPath)
 	print("ENVIRONMENT WILL AUTOSAVE MAGMOMS TO: " + outPath);
 }
 
+void SimRunner::SETMAGPATTERN(std::vector<double> mag_pattern)
+{
+	simVars.mag_pattern = mag_pattern;
+	simEnv->setMagPattern(mag_pattern);
+	print("ENVIRONMENT SET MAGPATTERN AND WILL USE IT MOVING FORWARD!");
+}
+
 void SimRunner::SETTEMP(double temp)
 {
 	simVars.temperature = temp;

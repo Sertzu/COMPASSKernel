@@ -88,5 +88,8 @@
     <None Include="inputs\ScriptSrCoO3.comps">
       <Filter>Ressourcendateien</Filter>
     </None>
+    <None Include="inputs\ScriptSFMO.comps">
+      <Filter>Ressourcendateien</Filter>
+    </None>
   </ItemGroup>
 </Project>

@@ -29,6 +29,7 @@ struct SimulationVariables
 	double CompStrength = 0.0;
 	XYZ CompDir = XYZ::X;
 
+	std::vector<double> mag_pattern;
 	std::vector<std::vector<std::tuple<int, double>>> links;
 	std::vector<std::vector<std::vector<int>>> linksNN;
 	std::vector<std::vector<double>> magmoms;
@@ -45,6 +46,7 @@ public:
 	void LOADCHECKPOINT(std::string outPath = "");
 	void SAVECHECKPOINT(std::string outPath = "");
 	void SETMAGMOMAUTOSAVE(std::string outPath = "");
+	void SETMAGPATTERN(std::vector<double> mag_pattern);
 
 	void SETTEMP(double temp);
 	void SETMAGFIELD(double HVal, XYZ dir);
@@ -61,7 +63,6 @@ public:
 
 	void SWEEPTEMP(double targetTemp, double tempSteps, int approachSteps, int equilibSteps, int measurementSteps);
 
-	// NOT IMPLEMENTED
 	void SWEEPMAG(double targetH, double HSteps, int approachSteps, int equilibSteps, int measurementSteps);
 private:
 	SimRunner();

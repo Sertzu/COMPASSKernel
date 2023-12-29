@@ -24,6 +24,7 @@ enum class ScriptOption {
     SWEEPMAG,
     SETEASYPLANE,
     SETCOMPASSANISO,
+    SETMAGPATTERN,
 
     INVALID
 };
