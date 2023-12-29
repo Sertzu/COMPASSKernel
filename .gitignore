@@ -37,3 +37,7 @@
 *.user
 *.txt
 /.vs
+/resultsMW
+/resultsMW2
+/SFMOInputs
+/SFMOResults
