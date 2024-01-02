@@ -106,6 +106,7 @@ private:
 	std::vector<std::vector<double>> m_magmoms;
     std::vector<std::tuple<int, std::vector<double>>> m_atomCoordinates;
     std::vector<int> m_atomTypes;
+    std::vector<std::string> m_atomNames;
 
     std::vector<std::vector<std::vector<double>>> m_magmomsHistory;
 	std::vector<double> m_meanmagmomsHistory;

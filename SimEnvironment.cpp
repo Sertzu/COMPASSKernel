@@ -27,14 +27,24 @@ std::vector<std::string> read_file_without_comments(const std::string& file_path
     return lines;
 }
 
-std::tuple<int, int, double, bool, bool, bool, int> extractLinks(const std::string& line) {
+std::tuple<int, int, double, bool, bool, bool, int, std::string> extractLinks(const std::string& line) {
     std::istringstream iss(line);
     int first, third;
     double last;
     std::vector<double> values;
-    double value;
-    while (iss >> value) {
-        values.push_back(value);
+    std::string atomName;
+    std::string token;
+
+    while (iss >> token) {
+        std::istringstream tokenStream(token);
+        double value;
+        if (tokenStream >> value) {
+            values.push_back(value);
+        }
+        else {
+            atomName = token;
+            break;
+        }
     }
 
     first = static_cast<int>(values[0]);
@@ -56,7 +66,7 @@ std::tuple<int, int, double, bool, bool, bool, int> extractLinks(const std::stri
                 isNearestNeighbourZ = true;
         }
     
-    return std::make_tuple(first, third, last, isNearestNeighbourX, isNearestNeighbourY, isNearestNeighbourZ, static_cast<int>(values[18]));
+    return std::make_tuple(first, third, last, isNearestNeighbourX, isNearestNeighbourY, isNearestNeighbourZ, static_cast<int>(values[18]), atomName);
 }
 
 
@@ -112,6 +122,7 @@ SimEnvironment::SimEnvironment(std::string input, std::string output, double tem
     m_linksNN[2].resize(m_atomnum);
     m_atomCoordinates.resize(m_atomnum);
     m_atomTypes.resize(m_atomnum);
+    m_atomNames.resize(m_atomnum);
 
     for (int i = 0; i < lines.size(); i++)
     {
@@ -133,6 +144,8 @@ SimEnvironment::SimEnvironment(std::string input, std::string output, double tem
 
         m_atomCoordinates[std::get<0>(coords) - 1] = coords;
         m_atomTypes[std::get<0>(values) - 1] = std::get<6>(values);
+        m_atomNames[std::get<0>(values) - 1] = std::get<7>(values);
+
     }
     m_singleIonAnisotropyTerm = { 0.0, 0.0, 0.0 };
     m_compassAnisotropyTerm = { 0.0, 0.0, 0.0 };
@@ -167,6 +180,7 @@ SimEnvironment::SimEnvironment(std::string input, std::string output, double tem
     m_linksNN[2].resize(m_atomnum);
     m_atomCoordinates.resize(m_atomnum);
     m_atomTypes.resize(m_atomnum);
+    m_atomNames.resize(m_atomnum);
 
     for (int i = 0; i < lines.size(); i++)
     {
@@ -188,6 +202,7 @@ SimEnvironment::SimEnvironment(std::string input, std::string output, double tem
 
         m_atomCoordinates[std::get<0>(coords) - 1] = coords;
         m_atomTypes[std::get<0>(values) - 1] = std::get<6>(values);
+        m_atomNames[std::get<0>(values) - 1] = std::get<7>(values);
     }
     m_singleIonAnisotropyTerm = { 0.0, 0.0, 0.0 };
     m_atomnum = m_links.size();
@@ -786,9 +801,8 @@ void SimEnvironment::writeMagneticMomentsToFile(std::string path)
         outFile << formatDouble(sumy / norm, 9, 5) << ' ';
         outFile << formatDouble(sumz / norm, 9, 5) << ' ';
 
-        outFile << formatDouble(sumx, 11, 5) << ' ';
-        outFile << formatDouble(sumy, 11, 5) << ' ';
-        outFile << formatDouble(sumz, 11, 5) << ' ';
+        outFile << m_atomTypes[i] << ' ';
+        outFile << m_atomNames[i];
         outFile << '\n';
     }
 
