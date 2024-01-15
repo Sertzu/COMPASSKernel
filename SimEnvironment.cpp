@@ -154,6 +154,10 @@ SimEnvironment::SimEnvironment(std::string input, std::string output, double tem
     m_magmoms.reserve(m_atomnum);
     for (int i = 0; i < m_atomnum; i++)
         m_magmoms.push_back(generateRandomVecSingle());
+    if ((abs(m_compassAnisotropyTerm[0]) + abs(m_compassAnisotropyTerm[1]) + abs(m_compassAnisotropyTerm[2])) > 1e-8)
+        m_enableCompassAnisotropy = true;
+    else
+        m_enableCompassAnisotropy = false;
     m_tlog << getCurrentTime().time_string << " [SimEnvironment] Setup complete!" << std::endl << std::endl;
 }
 
@@ -209,6 +213,10 @@ SimEnvironment::SimEnvironment(std::string input, std::string output, double tem
     m_tlog << getCurrentTime().time_string << " [SimEnvironment] Initializing magnetic moments!" << std::endl;
     for (int i = 0; i < m_atomnum; i++)
         m_magmoms.push_back(generateRandomVecSingle());
+    if ((abs(m_compassAnisotropyTerm[0]) + abs(m_compassAnisotropyTerm[1]) + abs(m_compassAnisotropyTerm[2])) > 1e-8)
+        m_enableCompassAnisotropy = true;
+    else
+        m_enableCompassAnisotropy = false;
     m_tlog << getCurrentTime().time_string << " [SimEnvironment] Setup complete!" << std::endl << std::endl;
 }
 
@@ -240,7 +248,7 @@ SimEnvironment::SimEnvironment(std::string input, std::string output, double tem
     }
     else
         m_magmoms = magmomsIn;
-    if ((abs(m_compassAnisotropyTerm[0]) + abs(m_compassAnisotropyTerm[0]) + abs(m_compassAnisotropyTerm[0])) < 1e-8)
+    if ((abs(m_compassAnisotropyTerm[0]) + abs(m_compassAnisotropyTerm[1]) + abs(m_compassAnisotropyTerm[2])) > 1e-8)
         m_enableCompassAnisotropy = true;
     else
         m_enableCompassAnisotropy = false;
@@ -309,9 +317,12 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approachTemp, doub
     BS::thread_pool pool;
     m_magmomsHistory.clear();
     m_meanmagmomsHistory.clear();
+    m_meanRawMagmomsHistory.clear();
+
     m_energyHistory.clear();
 
     m_meanmagmomsHistory.resize(steps);
+    m_meanRawMagmomsHistory.resize(steps);
     m_energyHistory.resize(steps);
     std::future<double> energy;
 
@@ -402,14 +413,23 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approachTemp, doub
             double M2 = 0.0;
             double M3 = 0.0;
 
+            double M1Stag = 0.0;
+            double M2Stag = 0.0;
+            double M3Stag = 0.0;
+
             if(m_useStaggeredMagnetization)
             {
                 for (int i = 0; i < m_atomnum; i++)
                 {
+                    M1 += m_magmoms[i][0];
+                    M2 += m_magmoms[i][1];
+                    M3 += m_magmoms[i][2];
+
                     double pattern = m_magnetizationPattern[m_atomTypes[i] - 1];
-                    M1 += m_magmoms[i][0] * pattern;
-                    M2 += m_magmoms[i][1] * pattern;
-                    M3 += m_magmoms[i][2] * pattern;
+                    M1Stag += m_magmoms[i][0] * pattern;
+                    M2Stag += m_magmoms[i][1] * pattern;
+                    M3Stag += m_magmoms[i][2] * pattern;
+
                 }
             }
             else
@@ -420,11 +440,26 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approachTemp, doub
                     M2 += m_magmoms[i][1];
                     M3 += m_magmoms[i][2];
                 }
+
+                M1Stag = M1;
+                M2Stag = M2;
+                M3Stag = M3;
             }
+
             M1 /= m_atomnum;
             M2 /= m_atomnum;
             M3 /= m_atomnum;
-            m_meanmagmomsHistory[step - 1] = std::sqrt(M1* M1 + M2 * M2 + M3 * M3);
+
+            M1Stag /= m_atomnum;
+            M2Stag /= m_atomnum;
+            M3Stag /= m_atomnum;
+
+            m_meanmagmomsHistory[step - 1] = std::sqrt(M1Stag * M1Stag + M2Stag * M2Stag + M3Stag * M3Stag);
+
+            m_meanRawMagmomsHistory[step - 1][0] = M1;
+            m_meanRawMagmomsHistory[step - 1][1] = M2;
+            m_meanRawMagmomsHistory[step - 1][2] = M3;
+
             energy = pool.submit(&SimEnvironment::energy_calculator, this);
             //energyHistory[step - 1] = energy_calculator();
             if (steps - step < m_MAXMAGMOMHISTSIZE)
@@ -441,42 +476,7 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approachTemp, doub
         if (measurement && step != 1)
             m_energyHistory[step - 1] = energy.get();
 
-        //generateRandomVecArray(randomNumberVector3DSwap);
-        //generateAcceptanceVec(acceptanceVectorSwap);
-
         syncPointRun.arrive_and_wait();
-
-        //randomNumberVector3D.swap(randomNumberVector3DSwap);
-        //acceptanceVector.swap(acceptanceVectorSwap);
-
-        /*
-        //Parallel Way
-        pool.push_loop(atomnum,
-            [&](const int a, const int b)
-            {
-                for (int i = a; i < b; ++i)
-                    rateVector[i] = rate_calculator(i, beta, magmoms[i], randomNumberVector3D[i], magmoms);
-            });
-
-        generateAcceptanceVec(acceptanceVector);
-        pool.wait_for_tasks();
-
-        if (measurement)
-            energyHistory[step - 1] = energy.get();
-
-
-        pool.push_loop(atomnum,
-            [&](const int a, const int b)
-            {
-                for (int i = a; i < b; ++i)
-                    if (acceptanceVector[i] < rateVector[i])
-                    {
-                        magmoms[i] = randomNumberVector3D[i];
-                    }
-            });
-
-        pool.wait_for_tasks();
-        */
 
         if (approachTemp)
             runningTemperature *= approachValue;
@@ -553,6 +553,11 @@ void SimEnvironment::setCompassAnisotropy(double xComp, double yComp, double zCo
     m_compassAnisotropyTerm[0] = xComp;
     m_compassAnisotropyTerm[1] = yComp;
     m_compassAnisotropyTerm[2] = zComp;
+
+    if ((abs(m_compassAnisotropyTerm[0]) + abs(m_compassAnisotropyTerm[1]) + abs(m_compassAnisotropyTerm[2])) > 1e-8)
+        m_enableCompassAnisotropy = true;
+    else
+        m_enableCompassAnisotropy = false;
 }
 
 void SimEnvironment::setOutputPath(std::string out)
@@ -600,8 +605,8 @@ double SimEnvironment::energy_diff_calculator(const int& index, const std::vecto
 
         // 0.672 -> unity conversion factor mu_B/k_B https://pubs.aip.org/aip/adv/article/5/12/127124/661186/Modeling-of-hysteresis-loops-by-Monte-Carlo
 
-        Hold -= oldMom[i] * m_zeemanTerm[i] * 0.672;
-        Hnew -= newMom[i] * m_zeemanTerm[i] * 0.672;
+        Hold -= oldMom[i] * m_zeemanTerm[i];
+        Hnew -= newMom[i] * m_zeemanTerm[i];
     }
     // Compass anisotropy
     if(m_enableCompassAnisotropy)
@@ -647,8 +652,15 @@ double SimEnvironment::energy_calculator()
                     tempEnergy -= m_magmoms[i][j] * m_magmoms[i][j] * m_singleIonAnisotropyTerm[j];
 
                     // 0.672 -> unity conversion factor mu_B/k_B https://pubs.aip.org/aip/adv/article/5/12/127124/661186/Modeling-of-hysteresis-loops-by-Monte-Carlo
-                    tempEnergy -= m_magmoms[i][j] * m_zeemanTerm[j] * 0.672; 
+                    tempEnergy -= m_magmoms[i][j] * m_zeemanTerm[j]; 
                 }
+                // Compass anisotropy
+                if (m_enableCompassAnisotropy)
+                    for (int j = 0; j < 3; j++)
+                        for (auto linkforatom : m_linksNN[j][i])
+                        {
+                            tempEnergy -= m_magmoms[i][j] * m_magmoms[linkforatom][j] * m_compassAnisotropyTerm[j];
+                        }
             }
             energyLock.lock();
             energy += tempEnergy;
@@ -715,15 +727,34 @@ std::vector<double> SimEnvironment::getParameters()
     double magmomFirstorder = 0.0;
     double magmomSecondorder = 0.0;
     double magmomFourthorder = 0.0;
+
+    double rawMagmomXDir = 0.0;
+    double rawMagmomYDir = 0.0;
+    double rawMagmomZDir = 0.0;
+
     for (double value : m_meanmagmomsHistory)
     {
         magmomFirstorder += value;
         magmomSecondorder += value * value;
         magmomFourthorder += value * value * value * value;
     }
-    magmomFirstorder /= m_meanmagmomsHistory.size();
-    magmomSecondorder /= m_meanmagmomsHistory.size();
-    magmomFourthorder /= m_meanmagmomsHistory.size();
+
+    for (const auto& magmomVal : m_meanRawMagmomsHistory)
+    {
+        rawMagmomXDir += magmomVal[0];
+        rawMagmomYDir += magmomVal[1];
+        rawMagmomZDir += magmomVal[2];
+    }
+
+    int historySize = m_meanmagmomsHistory.size();
+
+    rawMagmomXDir /= historySize;
+    rawMagmomYDir /= historySize;
+    rawMagmomZDir /= historySize;
+
+    magmomFirstorder /= historySize;
+    magmomSecondorder /= historySize;
+    magmomFourthorder /= historySize;
 
     double energyFirstorder = 0.0;
     double energySecondorder = 0.0;
@@ -744,6 +775,9 @@ std::vector<double> SimEnvironment::getParameters()
     m_tlog << getCurrentTime().time_string << " [SimEnvironment] Parameters are:" << std::endl;
     m_tlog << getCurrentTime().time_string << " [SimEnvironment] Temperature: " << m_temperature << std::endl;
     m_tlog << getCurrentTime().time_string << " [SimEnvironment] MagMom: " << MagMom << std::endl;
+    m_tlog << getCurrentTime().time_string << " [SimEnvironment] RawMagMomXDir: " << rawMagmomXDir << std::endl;
+    m_tlog << getCurrentTime().time_string << " [SimEnvironment] RawMagMomYDir: " << rawMagmomYDir << std::endl;
+    m_tlog << getCurrentTime().time_string << " [SimEnvironment] RawMagMomZDir: " << rawMagmomZDir << std::endl;
     m_tlog << getCurrentTime().time_string << " [SimEnvironment] Chi: " << Chi << std::endl;
     m_tlog << getCurrentTime().time_string << " [SimEnvironment] Energy: " << E << std::endl;
     m_tlog << getCurrentTime().time_string << " [SimEnvironment] HeatCapacity: " << HeatCapacity << std::endl;
@@ -751,7 +785,7 @@ std::vector<double> SimEnvironment::getParameters()
 
     auto magtotal = m_zeemanTerm[0] + m_zeemanTerm[1] + m_zeemanTerm[2];
 
-    std::vector<double> returnVals = { m_temperature, MagMom, Chi, U4, E, HeatCapacity, m_singleIonAnisotropyTerm[2], magtotal };
+    std::vector<double> returnVals = { m_temperature, MagMom, Chi, U4, E, HeatCapacity, m_singleIonAnisotropyTerm[2], magtotal, rawMagmomXDir, rawMagmomYDir, rawMagmomZDir };
     return returnVals;
 }
 

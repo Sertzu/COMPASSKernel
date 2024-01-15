@@ -191,9 +191,9 @@ void writeResultsToFile(const std::string& filename, const std::vector<double>& 
     else {
         // Create a new file and add the header
         datFile.open(fullFileNameDat, std::ios::out);
-        datFile << "# Temp         M          Chi        U4         E     HeatCapacity       K        H\n";
+        datFile << "# Temp         M          Chi        U4         E     HeatCapacity       K        H          M_x        M_y        M_z\n";
     }
-    std::string out(formatDouble(data[0], 9, 5) + "  " + formatDouble(data[1], 9, 5) + "  " + formatDouble(data[2], 9, 5) + "  " + formatDouble(data[3], 9, 5) + "  " + formatDouble(data[4], 9, 5) + "  " + formatDouble(data[5], 9, 5) + "  " + formatDouble(data[6], 9, 5) + "  " + formatDouble(data[7], 9, 5));
+    std::string out(formatDouble(data[0], 9, 5) + "  " + formatDouble(data[1], 9, 5) + "  " + formatDouble(data[2], 9, 5) + "  " + formatDouble(data[3], 9, 5) + "  " + formatDouble(data[4], 9, 5) + "  " + formatDouble(data[5], 9, 5) + "  " + formatDouble(data[6], 9, 5) + "  " + formatDouble(data[7], 9, 5) + "  " + formatDouble(data[8], 9, 5) + "  " + formatDouble(data[9], 9, 5) + "  " + formatDouble(data[10], 9, 5));
     // Append the string
     datFile << out << '\n';
 
@@ -212,7 +212,7 @@ void writeResultsToFile(const std::string& filename, const std::vector<double>& 
     else {
         // Create a new file and add the header
         csvFile.open(fullFileNameCsv, std::ios::out);
-        csvFile << "temperature;magnetization;chi;kumulantU4;energy;heatCapacity;singleIonAnisotropyTerm;magneticFieldStrength\n";
+        csvFile << "temperature;magnetization;chi;kumulantU4;energy;heatCapacity;singleIonAnisotropyTerm;magneticFieldStrength;magnetizationXDir;magnetizationYDir;magnetizationZDir\n";
     }
     // Check if the file stream is open
     if (csvFile.is_open()) {

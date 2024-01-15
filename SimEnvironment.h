@@ -110,6 +110,7 @@ private:
 
     std::vector<std::vector<std::vector<double>>> m_magmomsHistory;
 	std::vector<double> m_meanmagmomsHistory;
+    std::vector<std::array<double, 3>> m_meanRawMagmomsHistory;
 	std::vector<double> m_energyHistory;
 
 	std::string m_inputPath;

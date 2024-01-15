@@ -303,7 +303,7 @@ void ScriptHandler::runScript()
             simRunner_.APPROACHTEMP(std::stod(command[1]), std::stoi(command[2]));
             break;
         case(ScriptOption::APPROACHMAG):
-            simRunner_.APPROACHTEMP(std::stod(command[1]), std::stoi(command[2]));
+            simRunner_.APPROACHMAG(std::stod(command[1]), std::stoi(command[2]));
             break;
         case(ScriptOption::EQUILIB):
             simRunner_.EQUILIB(std::stoi(command[1]));
