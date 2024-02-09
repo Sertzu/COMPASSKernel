@@ -20,6 +20,8 @@
 #include <wincrypt.h>
 #include <barrier>
 
+typedef std::array<float, 3> Vec3;
+
 class ThreadLogger {
 public:
     ThreadLogger(int threadnum = 0, bool writeToConsole = false) : writeToConsole(writeToConsole), threadnum(threadnum) {
@@ -97,7 +99,6 @@ private:
 
     ThreadLogger m_tlog;
 	unsigned int m_threadnum;
-    int m_workerCount = 8;
 
 	std::vector<std::vector<std::tuple<int, float>>> m_links;
     std::vector<std::vector<std::vector<int>>> m_linksNN;
@@ -132,4 +133,5 @@ private:
 	std::mt19937 gen;
 	
     int m_statusSteps = 1000;
+    int m_workerCount = 8;
 };
