@@ -18,8 +18,8 @@
 int main(int argc, char* argv[])
 {
     ScriptHandler scriptExecutor("inputs/SETTINGS.cfg");
-    // scriptExecutor.loadScript("inputs/ScriptCrSb.comps");
-    scriptExecutor.loadScript("inputs/ScriptGdRu2Si2.comps");
+    scriptExecutor.loadScript("inputs/ScriptCrSb.comps");
+    // scriptExecutor.loadScript("inputs/ScriptGdRu2Si2.comps");
     scriptExecutor.showScript();
     scriptExecutor.runScript();
 
@@ -45,16 +45,5 @@ int main(int argc, char* argv[])
 
     //simRunner.SWEEPTEMP(250., 5., 20000, 20000, 20000);
     
-    exit(1);
-
-    // END RUNNER TEST
-    auto time = getCurrentTime();
-
-    SettingsClass simSettings("inputs/SETTINGS.cfg");
-    auto outputPath = simSettings.get<std::string>("outputPath");
-    create_and_run_threads(simSettings);
-    std::cout << getCurrentTime().time_string << " [Kernel] All threads finished. Sorting file: "  << outputPath + "\\results.dat" << std::endl;
-    sort_file_by_first_entry(outputPath + "\\results.dat");
-
     return 0;
 }

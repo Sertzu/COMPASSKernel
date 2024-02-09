@@ -2,7 +2,7 @@
 
 std::mutex mtx;
 
-
+/*
 void run_sim_thread(unsigned int threadnum, std::string inputPath, std::string outputPath, double temp, int equilibsteps, int measuresteps, const std::vector<std::vector<std::tuple<int, double>>>& links, const std::vector<std::tuple<int, std::vector<double>>>& atomCoordinates, const std::vector<std::vector<std::vector<int>>>& linksNN, double KVec, double CVec)
 {
     std::unique_lock<std::mutex> lock(mtx);
@@ -124,3 +124,4 @@ void create_and_run_threads(SettingsClass simSettings)
         }
     }
 }
+*/

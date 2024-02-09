@@ -1,45 +1,66 @@
 #include "SimEnvironment.h"
 #include <filesystem> // Requires C++17
+#include <charconv>
 
 namespace fs = std::filesystem;
 
-inline void dotProduct(double& sum, const std::vector<double>& vec1, const std::vector<double>& vec2) {
+inline void dotProduct(float& sum, const std::vector<float>& vec1, const std::vector<float>& vec2) {
     sum = vec1[0] * vec2[0] + vec1[1] * vec2[1] + vec1[2] * vec2[2];
 }
 
 std::vector<std::string> read_file_without_comments(const std::string& file_path) {
-    std::vector<std::string> lines;
     std::ifstream input_file(file_path);
+    std::vector<std::string> lines;
 
-    if (input_file.is_open()) {
-        std::string line;
-        while (std::getline(input_file, line)) {
-            if (!(line.empty() || line[0] == '#' || line[0] == '!')) {
-                lines.push_back(line);
-            }
-        }
-        input_file.close();
-    }
-    else {
+    if (!input_file.is_open()) {
         std::cerr << "Unable to open file: " << file_path << std::endl;
+        return lines; // Return an empty vector if file can't be opened.
+    }
+
+    // Count the total number of lines in a single pass.
+    size_t num_lines = std::count(std::istreambuf_iterator<char>(input_file),
+        std::istreambuf_iterator<char>(), '\n');
+
+    // Reserve space in the vector based on the total number of lines.
+    lines.reserve(num_lines);
+
+    // Seek back to the beginning of the file to read it.
+    input_file.clear(); // Clear eof and any other flags.
+    input_file.seekg(0, std::ios::beg);
+
+    // Read the file and store the lines, skipping those not needed.
+    std::string line;
+    while (std::getline(input_file, line)) {
+        if (!(line.empty() || line[0] == '#' || line[0] == '!')) {
+            lines.push_back(line);
+        }
     }
 
     return lines;
 }
 
-std::tuple<int, int, double, bool, bool, bool, int, std::string> extractLinks(const std::string& line) {
+void extractLinksAndCoordinates(const std::string& line, std::tuple<int, int, float, bool, bool, bool, int, std::string, std::tuple<int, std::vector<float>>>& values_in) {
     std::istringstream iss(line);
-    int first, third;
-    double last;
-    std::vector<double> values;
+
+    float values[30]; 
+    std::fill_n(values, 30, std::numeric_limits<float>::quiet_NaN());
+    int value_count = 0; 
+
     std::string atomName;
     std::string token;
 
     while (iss >> token) {
-        std::istringstream tokenStream(token);
-        double value;
-        if (tokenStream >> value) {
-            values.push_back(value);
+        // Check if the token can be converted to a float and if we have not exceeded the array size.
+        if (!token.empty() && value_count < 30 && std::all_of(token.begin(), token.end(), [](char c) { return std::isdigit(c) || c == '.' || c == '-'; })) {
+            float value;
+            auto result = std::from_chars(token.data(), token.data() + token.size(), value);
+            if (result.ec == std::errc()) {
+                values[value_count++] = value;
+            }
+            else {
+                atomName = token;
+                break;
+            }
         }
         else {
             atomName = token;
@@ -47,15 +68,15 @@ std::tuple<int, int, double, bool, bool, bool, int, std::string> extractLinks(co
         }
     }
 
-    first = static_cast<int>(values[0]);
-    third = static_cast<int>(values[2]);
-    last = values[8];
+    std::get<0>(values_in) = static_cast<int>(values[0]);
+    std::get<1>(values_in) = static_cast<int>(values[2]);
+    std::get<2>(values_in) = values[8];
 
     bool isNearestNeighbourX = false;
     bool isNearestNeighbourY = false;
     bool isNearestNeighbourZ = false;
     
-    if(values.size() == 19)
+    if(value_count == 19)
         if(((abs(static_cast<int>(values[12])) + abs(static_cast<int>(values[13])) + abs(static_cast<int>(values[14]))) < 2) 
             && static_cast<int>(values[1]) == static_cast<int>(values[3]))
         {
@@ -66,19 +87,31 @@ std::tuple<int, int, double, bool, bool, bool, int, std::string> extractLinks(co
             if (abs(static_cast<int>(values[14])) == 1)
                 isNearestNeighbourZ = true;
         }
-    
-    return std::make_tuple(first, third, last, isNearestNeighbourX, isNearestNeighbourY, isNearestNeighbourZ, static_cast<int>(values[18]), atomName);
+
+    std::get<3>(values_in) = isNearestNeighbourX;
+    std::get<4>(values_in) = isNearestNeighbourY;
+    std::get<5>(values_in) = isNearestNeighbourZ;
+
+    std::get<6>(values_in) = static_cast<int>(values[18]);
+    std::get<7>(values_in) = atomName;
+
+    std::get<0>(std::get<8>(values_in)) = static_cast<int>(values[0]);
+
+    std::get<1>(std::get<8>(values_in)).resize(3);
+    std::get<1>(std::get<8>(values_in))[0] = values[9];
+    std::get<1>(std::get<8>(values_in))[1] = values[10];
+    std::get<1>(std::get<8>(values_in))[2] = values[11];
 }
 
 
-std::tuple<int, std::vector<double>> extractCoordinates(const std::string& line)
+std::tuple<int, std::vector<float>> extractCoordinates(const std::string& line)
 {
     std::istringstream iss(line);
     int first, third, counter;
-    double last;
-    static std::vector<double> values(20, 0.0);
-    double value;
-    static std::vector<double> coords{0.0,0.0,0.0};
+    float last;
+    static std::vector<float> values(20, 0.0);
+    float value;
+    static std::vector<float> coords{0.0,0.0,0.0};
     counter = 0;
     while (iss >> value && counter < 12) {
         values[counter] = value;
@@ -100,7 +133,7 @@ SimEnvironment::SimEnvironment()
     m_temperature = 0;
 }
 
-SimEnvironment::SimEnvironment(std::string input, std::string output, double temp) : gen(rd())
+SimEnvironment::SimEnvironment(std::string input, std::string output, float temp) : gen(rd())
 {
     m_threadnum = 0;
     m_tlog = ThreadLogger(m_threadnum, true);
@@ -115,7 +148,10 @@ SimEnvironment::SimEnvironment(std::string input, std::string output, double tem
     auto lines = read_file_without_comments(m_inputPath);
     m_tlog << getCurrentTime().time_string << " [SimEnvironment] Read input file, converting data!" << std::endl;
 
-    m_atomnum = std::get<0>(extractLinks(lines.back()));
+    std::tuple<int, int, float, bool, bool, bool, int, std::string, std::tuple<int, std::vector<float>>> values;
+    extractLinksAndCoordinates(lines.back(), values);
+
+    m_atomnum = std::get<0>(values);
     m_linksNN.resize(3);
     m_links.resize(m_atomnum);
     m_linksNN[0].resize(m_atomnum);
@@ -125,10 +161,12 @@ SimEnvironment::SimEnvironment(std::string input, std::string output, double tem
     m_atomTypes.resize(m_atomnum);
     m_atomNames.resize(m_atomnum);
 
+    auto coords = std::get<8>(values);
+
     for (int i = 0; i < lines.size(); i++)
     {
-        auto values = extractLinks(lines[i]);
-        auto coords = extractCoordinates(lines[i]);
+        extractLinksAndCoordinates(lines[i], values);
+        coords = std::get<8>(values);
         m_links[std::get<0>(values) - 1].push_back(std::make_tuple(std::get<1>(values) - 1, std::get<2>(values)));
         if(std::get<3>(values))
         {
@@ -162,101 +200,7 @@ SimEnvironment::SimEnvironment(std::string input, std::string output, double tem
     m_tlog << getCurrentTime().time_string << " [SimEnvironment] Setup complete!" << std::endl << std::endl;
 }
 
-SimEnvironment::SimEnvironment(std::string input, std::string output, double temp, unsigned int threadnumber) : gen(rd())
-{
-    m_threadnum = threadnumber;
-    if(m_threadnum)
-        m_tlog = ThreadLogger(m_threadnum, false);
-    else
-        m_tlog = ThreadLogger(m_threadnum, true);
-    m_inputPath = input;
-    m_outputPath = output;
-    m_temperature = temp;
-    m_tlog << getCurrentTime().time_string << " [SimEnvironment] Setting up SimEnvironment!" << std::endl;
-    m_tlog << getCurrentTime().time_string << " [SimEnvironment] Reading input file: " << input << std::endl;
-    auto lines = read_file_without_comments(m_inputPath);
-    m_tlog << getCurrentTime().time_string << " [SimEnvironment] Read input file, converting data!" << std::endl;
-
-    m_atomnum = std::get<0>(extractLinks(lines.back()));
-    m_linksNN.resize(3);
-    m_links.resize(m_atomnum);
-    m_linksNN[0].resize(m_atomnum);
-    m_linksNN[1].resize(m_atomnum);
-    m_linksNN[2].resize(m_atomnum);
-    m_atomCoordinates.resize(m_atomnum);
-    m_atomTypes.resize(m_atomnum);
-    m_atomNames.resize(m_atomnum);
-
-    for (int i = 0; i < lines.size(); i++)
-    {
-        auto values = extractLinks(lines[i]);
-        auto coords = extractCoordinates(lines[i]);
-        m_links[std::get<0>(values) - 1].push_back(std::make_tuple(std::get<1>(values) - 1, std::get<2>(values)));
-        if (std::get<3>(values))
-        {
-            m_linksNN[0][std::get<0>(values) - 1].push_back(std::get<1>(values) - 1);
-        }
-        if (std::get<4>(values))
-        {
-            m_linksNN[1][std::get<0>(values) - 1].push_back(std::get<1>(values) - 1);
-        }
-        if (std::get<5>(values))
-        {
-            m_linksNN[2][std::get<0>(values) - 1].push_back(std::get<1>(values) - 1);
-        }
-
-        m_atomCoordinates[std::get<0>(coords) - 1] = coords;
-        m_atomTypes[std::get<0>(values) - 1] = std::get<6>(values);
-        m_atomNames[std::get<0>(values) - 1] = std::get<7>(values);
-    }
-    m_singleIonAnisotropyTerm = { 0.0, 0.0, 0.0 };
-    m_atomnum = m_links.size();
-    m_tlog << getCurrentTime().time_string << " [SimEnvironment] Initializing magnetic moments!" << std::endl;
-    for (int i = 0; i < m_atomnum; i++)
-        m_magmoms.push_back(generateRandomVecSingle());
-    if ((abs(m_compassAnisotropyTerm[0]) + abs(m_compassAnisotropyTerm[1]) + abs(m_compassAnisotropyTerm[2])) > 1e-8)
-        m_enableCompassAnisotropy = true;
-    else
-        m_enableCompassAnisotropy = false;
-    m_tlog << getCurrentTime().time_string << " [SimEnvironment] Setup complete!" << std::endl << std::endl;
-}
-
-SimEnvironment::SimEnvironment(std::string input, std::string output, double temp, unsigned int threadnumber, const std::vector<std::vector<std::tuple<int, double>>> &linksIn, const std::vector<std::tuple<int, std::vector<double>>>& atomCoordinatesIn,const std::vector<std::vector<std::vector<int>>>& linksNNIn, std::vector<double> interactionCompIn, std::vector<double> interactionCIn, std::vector<std::vector<double>> magmomsIn, std::vector<double> magneticFieldHIn)
-{
-    m_threadnum = threadnumber;
-    if (m_threadnum)
-        m_tlog = ThreadLogger(m_threadnum, false);
-    else
-        m_tlog = ThreadLogger(m_threadnum, true);
-    m_inputPath = input;
-    m_outputPath = output;
-    m_temperature = temp;
-    m_tlog << getCurrentTime().time_string << " [SimEnvironment] Setting up SimEnvironment!" << std::endl;
-    m_tlog << getCurrentTime().time_string << " [SimEnvironment] Using links from reference!" << input << std::endl;
-    m_links = linksIn;
-    m_linksNN = linksNNIn;
-    m_singleIonAnisotropyTerm = interactionCompIn;
-    m_compassAnisotropyTerm = interactionCIn;
-    m_zeemanTerm = magneticFieldHIn;
-    m_atomCoordinates = atomCoordinatesIn;
-    m_atomnum = m_links.size();
-    m_tlog << getCurrentTime().time_string << " [SimEnvironment] Initializing magnetic moments!" << std::endl;
-
-    if (magmomsIn.size() == 0)
-    {
-        for (int i = 0; i < m_atomnum; i++)
-            m_magmoms.push_back(generateRandomVecSingle());
-    }
-    else
-        m_magmoms = magmomsIn;
-    if ((abs(m_compassAnisotropyTerm[0]) + abs(m_compassAnisotropyTerm[1]) + abs(m_compassAnisotropyTerm[2])) > 1e-8)
-        m_enableCompassAnisotropy = true;
-    else
-        m_enableCompassAnisotropy = false;
-    m_tlog << getCurrentTime().time_string << " [SimEnvironment] Setup complete!" << std::endl << std::endl;
-}
-
-std::vector<std::vector<std::tuple<int, double>>> SimEnvironment::getLinks()
+std::vector<std::vector<std::tuple<int, float>>> SimEnvironment::getLinks()
 {
     return m_links;
 }
@@ -266,17 +210,17 @@ std::vector<std::vector<std::vector<int>>> SimEnvironment::getLinksNN()
     return m_linksNN;
 }
 
-std::vector<std::tuple<int, std::vector<double>>> SimEnvironment::getAtomCoordinates()
+std::vector<std::tuple<int, std::vector<float>>> SimEnvironment::getAtomCoordinates()
 {
     return m_atomCoordinates;
 }
 
-std::vector<std::vector<double>> SimEnvironment::getMagmoms()
+std::vector<std::vector<float>> SimEnvironment::getMagmoms()
 {
     return m_magmoms;
 }
 
-void SimEnvironment::runSim(int steps, bool measurement, bool approachTemp, double initialtemp, bool approachMag, double initialH)
+void SimEnvironment::runSim(int steps, bool measurement, bool approachTemp, float initialtemp, bool approachMag, float initialH)
 {
     m_magmomsHistory.clear();
     m_meanmagmomsHistory.clear();
@@ -288,9 +232,9 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approachTemp, doub
     else
         m_tlog << getCurrentTime().time_string << " [Kernel] Starting MC simulation in equilib mode for " << steps << " steps!" << std::endl;
     auto lasttime = std::chrono::high_resolution_clock::now();
-    double approachValue;
-    double runningTemperature = m_temperature;
-    double runningMag = m_zeemanTerm[m_magDir];
+    float approachValue;
+    float runningTemperature = m_temperature;
+    float runningMag = m_zeemanTerm[m_magDir];
     if (approachTemp)
     {
         runningTemperature = initialtemp;
@@ -305,15 +249,15 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approachTemp, doub
         m_tlog << getCurrentTime().time_string << " [Kernel] Initial Magnetic Field is " << initialH << "T and Approachvalue is " << approachValue << std::endl;
     }
 
-    std::vector<std::vector<double>> randomNumberVector3D(m_atomnum, { 0.0 ,0.0 , 0.0});
-    std::vector<double> rateVector(m_atomnum, 0.0);
-    std::vector<double> acceptanceVector(m_atomnum, 0.0);
+    std::vector<std::vector<float>> randomNumberVector3D(m_atomnum, { 0.0 ,0.0 , 0.0});
+    std::vector<float> rateVector(m_atomnum, 0.0);
+    std::vector<float> acceptanceVector(m_atomnum, 0.0);
 
     //generateRandomVecArray(randomNumberVector3D);
     //generateAcceptanceVec(acceptanceVector);
 
-    std::vector<std::vector<double>> randomNumberVector3DSwap(m_atomnum, { 0.0 ,0.0 , 0.0 });
-    std::vector<double> acceptanceVectorSwap(m_atomnum, 0.0);
+    std::vector<std::vector<float>> randomNumberVector3DSwap(m_atomnum, { 0.0 ,0.0 , 0.0 });
+    std::vector<float> acceptanceVectorSwap(m_atomnum, 0.0);
 
     BS::thread_pool pool;
     m_magmomsHistory.clear();
@@ -325,9 +269,9 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approachTemp, doub
     m_meanmagmomsHistory.resize(steps);
     m_meanRawMagmomsHistory.resize(steps);
     m_energyHistory.resize(steps);
-    std::future<double> energy;
+    std::future<float> energy;
 
-    std::vector<std::vector<std::vector<double>>> magmomCopy;
+    std::vector<std::vector<std::vector<float>>> magmomCopy;
     for (int i = 0; i < m_workerCount; i++)
     {
         magmomCopy.push_back(m_magmoms);
@@ -337,15 +281,15 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approachTemp, doub
     std::barrier syncPointInit(m_workerCount + 1);
     std::barrier syncPointRun(m_workerCount + 1);
 
-    auto mcWorker = [&](std::stop_token stopToken, double& beta, std::vector<std::vector<double>> &magmoms, std::vector<std::vector<double>>& randomNumberVector3D, std::vector<double> &acceptanceVector, int start, int end)
+    auto mcWorker = [&](std::stop_token stopToken, float& beta, std::vector<std::vector<float>> &magmoms, std::vector<std::vector<float>>& randomNumberVector3D, std::vector<float> &acceptanceVector, int start, int end)
     {
         std::uniform_real_distribution<> randomizer(0.0, 1.0);
         std::random_device randDevice;
         std::mt19937 generator(randDevice());
         auto atomlinks = m_links;
-        double rate = 0.0;
-        double acceptor = 0.0;
-        std::vector<std::vector<double>> randomVec = { {0.0,0.0,0.0} };
+        float rate = 0.0;
+        float acceptor = 0.0;
+        std::vector<std::vector<float>> randomVec = { {0.0,0.0,0.0} };
         generateRandomVecArray(randomVec, randomizer, generator);
 
         syncPointInit.arrive_and_wait();
@@ -376,7 +320,7 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approachTemp, doub
     };
 
     std::vector<std::jthread> mcWorkers;
-    double beta = 1 / (m_kB * runningTemperature);
+    float beta = 1 / (m_kB * runningTemperature);
 
     mcWorkers.reserve(m_workerCount);
     for (int i = 0; i < m_workerCount; ++i) {
@@ -410,13 +354,13 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approachTemp, doub
         if (measurement)
         {
             
-            double M1 = 0.0;
-            double M2 = 0.0;
-            double M3 = 0.0;
+            float M1 = 0.0;
+            float M2 = 0.0;
+            float M3 = 0.0;
 
-            double M1Stag = 0.0;
-            double M2Stag = 0.0;
-            double M3Stag = 0.0;
+            float M1Stag = 0.0;
+            float M2Stag = 0.0;
+            float M3Stag = 0.0;
 
             if(m_useStaggeredMagnetization)
             {
@@ -426,7 +370,7 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approachTemp, doub
                     M2 += m_magmoms[i][1];
                     M3 += m_magmoms[i][2];
 
-                    double pattern = m_magnetizationPattern[m_atomTypes[i] - 1];
+                    float pattern = m_magnetizationPattern[m_atomTypes[i] - 1];
                     M1Stag += m_magmoms[i][0] * pattern;
                     M2Stag += m_magmoms[i][1] * pattern;
                     M3Stag += m_magmoms[i][2] * pattern;
@@ -503,12 +447,12 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approachTemp, doub
         m_tlog << getCurrentTime().time_string << " [Kernel] Finished MC simulation in equilib mode!" << std::endl << std::endl;
 }
 
-void SimEnvironment::setTemperature(double temp)
+void SimEnvironment::setTemperature(float temp)
 {
     m_temperature = temp;
 }
 
-void SimEnvironment::setMagneticField(double xH, double yH, double zH)
+void SimEnvironment::setMagneticField(float xH, float yH, float zH)
 {
     if (abs(xH) > 0.00000001)
         m_magDir = 0;
@@ -524,7 +468,7 @@ void SimEnvironment::setMagneticField(double xH, double yH, double zH)
     m_zeemanTerm[2] = zH;
 }
 
-void SimEnvironment::setSingleIonAnisotropy(double xC, double yC, double zC)
+void SimEnvironment::setSingleIonAnisotropy(float xC, float yC, float zC)
 {
     if (abs(xC) > 0.00001)
         m_singleIonDir = 0;
@@ -540,7 +484,7 @@ void SimEnvironment::setSingleIonAnisotropy(double xC, double yC, double zC)
     m_singleIonAnisotropyTerm[2] = zC;
 }
 
-void SimEnvironment::setCompassAnisotropy(double xComp, double yComp, double zComp)
+void SimEnvironment::setCompassAnisotropy(float xComp, float yComp, float zComp)
 {
     if (abs(xComp) > 0.00001)
         m_compassDir = 0;
@@ -568,7 +512,11 @@ void SimEnvironment::setOutputPath(std::string out)
 
 void SimEnvironment::setMagPattern(std::vector<double> mag_pattern)
 {
-    m_magnetizationPattern = mag_pattern;
+    std::vector<float> tempVec;
+    std::transform(mag_pattern.begin(), mag_pattern.end(), std::back_inserter(tempVec),
+        [](double d) { return static_cast<float>(d); });
+
+    m_magnetizationPattern = tempVec;
     m_useStaggeredMagnetization = true;
 }
 
@@ -582,12 +530,12 @@ std::string SimEnvironment::getOutputPath()
     return m_outputPath;
 }
 
-double SimEnvironment::energy_diff_calculator(const int& index, const std::vector<double>& oldMom, const std::vector<double>& newMom, const std::vector<std::vector<double>>& magmoms, const std::vector<std::vector<std::tuple<int, double>>>& atomlinks)
+float SimEnvironment::energy_diff_calculator(const int& index, const std::vector<float>& oldMom, const std::vector<float>& newMom, const std::vector<std::vector<float>>& magmoms, const std::vector<std::vector<std::tuple<int, float>>>& atomlinks)
 {
-    double Hold = 0.0;
-    double Hnew = 0.0;
+    float Hold = 0.0;
+    float Hnew = 0.0;
     int link;
-    double param, sum;
+    float param, sum;
     for (const auto& linkforatom : atomlinks[index])
     {
         link = std::get<0>(linkforatom);
@@ -621,23 +569,23 @@ double SimEnvironment::energy_diff_calculator(const int& index, const std::vecto
     return Hnew - Hold;
 }
 
-double SimEnvironment::rate_calculator(int& index, double& beta, std::vector<double>& oldMom, std::vector<double>& newMom, const std::vector<std::vector<double>>& magmoms,const std::vector<std::vector<std::tuple<int, double>>>& atomlinks)
+float SimEnvironment::rate_calculator(int& index, float& beta, std::vector<float>& oldMom, std::vector<float>& newMom, const std::vector<std::vector<float>>& magmoms,const std::vector<std::vector<std::tuple<int, float>>>& atomlinks)
 {
     return std::exp(-energy_diff_calculator(index, oldMom, newMom, magmoms, atomlinks) * beta);
 }
 
-double SimEnvironment::energy_calculator()
+float SimEnvironment::energy_calculator()
 {
-    double energy = 0.0;
+    float energy = 0.0;
     static BS::thread_pool calcpool;
     static std::mutex energyLock;
 
     calcpool.push_loop(m_atomnum,
         [&](const int a, const int b)
         {
-            double tempEnergy = 0.0;
+            float tempEnergy = 0.0;
             int link;
-            double param, sum;
+            float param, sum;
             for (int i = a; i < b; i++)
             {
                 for (auto linkforatom : m_links[i])
@@ -673,9 +621,9 @@ double SimEnvironment::energy_calculator()
     return energy;
 }
 
-std::vector<double> SimEnvironment::generateRandomVecSingle()
+std::vector<float> SimEnvironment::generateRandomVecSingle()
 {
-    double C1, C2, Csq;
+    float C1, C2, Csq;
 
     std::uniform_real_distribution<> ran(0.0, 1.0);
 
@@ -686,18 +634,18 @@ std::vector<double> SimEnvironment::generateRandomVecSingle()
         C2 = 1.0 - 2.0 * ran(gen);
         Csq = C1 * C1 + C2 * C2;
     }
-    double A, B, C;
+    float A, B, C;
     A = 2 * C1 * std::sqrt((1 - Csq));
     B = 2 * C2 * std::sqrt((1 - Csq));
     C = 1 - 2 * Csq;
-    std::vector<double> ranvec = { A, B, C};
+    std::vector<float> ranvec = { A, B, C};
     return ranvec;
 
 }
 
-void SimEnvironment::generateRandomVecArray(std::vector<std::vector<double>>& vecIn, std::uniform_real_distribution<>& randomizer, std::mt19937& generator)
+void SimEnvironment::generateRandomVecArray(std::vector<std::vector<float>>& vecIn, std::uniform_real_distribution<>& randomizer, std::mt19937& generator)
 {
-    double C1, C2, Csq;
+    float C1, C2, Csq;
 
     for (int i = 0; i < vecIn.size(); i++)
     {
@@ -714,7 +662,7 @@ void SimEnvironment::generateRandomVecArray(std::vector<std::vector<double>>& ve
     }
 }
 
-void SimEnvironment::generateAcceptanceVec(std::vector<double>& vecIn)
+void SimEnvironment::generateAcceptanceVec(std::vector<float>& vecIn)
 {
     std::uniform_real_distribution<> ran(0.0, 1.0);
     for (int i = 0; i < vecIn.size(); i++)
@@ -725,15 +673,15 @@ void SimEnvironment::generateAcceptanceVec(std::vector<double>& vecIn)
 
 std::vector<double> SimEnvironment::getParameters()
 {
-    double magmomFirstorder = 0.0;
-    double magmomSecondorder = 0.0;
-    double magmomFourthorder = 0.0;
+    float magmomFirstorder = 0.0;
+    float magmomSecondorder = 0.0;
+    float magmomFourthorder = 0.0;
 
-    double rawMagmomXDir = 0.0;
-    double rawMagmomYDir = 0.0;
-    double rawMagmomZDir = 0.0;
+    float rawMagmomXDir = 0.0;
+    float rawMagmomYDir = 0.0;
+    float rawMagmomZDir = 0.0;
 
-    for (double value : m_meanmagmomsHistory)
+    for (float value : m_meanmagmomsHistory)
     {
         magmomFirstorder += value;
         magmomSecondorder += value * value;
@@ -757,9 +705,9 @@ std::vector<double> SimEnvironment::getParameters()
     magmomSecondorder /= historySize;
     magmomFourthorder /= historySize;
 
-    double energyFirstorder = 0.0;
-    double energySecondorder = 0.0;
-    for (double value : m_energyHistory)
+    float energyFirstorder = 0.0;
+    float energySecondorder = 0.0;
+    for (float value : m_energyHistory)
     {
         energyFirstorder += value / m_atomnum;
         energySecondorder += value * value / (m_atomnum * m_atomnum);
@@ -767,11 +715,11 @@ std::vector<double> SimEnvironment::getParameters()
     energyFirstorder /= m_energyHistory.size();
     energySecondorder /= m_energyHistory.size();    
 
-    double MagMom = magmomFirstorder;
-    double Chi = m_atomnum / (m_kB * m_temperature) * (magmomSecondorder - magmomFirstorder * magmomFirstorder);
-    double U4 = 1 - magmomFourthorder / (3 * magmomSecondorder * magmomSecondorder);
-    double E = energyFirstorder;
-    double HeatCapacity = m_atomnum * m_atomnum / (m_kB * m_temperature * m_temperature) * (energySecondorder - energyFirstorder * energyFirstorder);
+    float MagMom = magmomFirstorder;
+    float Chi = m_atomnum / (m_kB * m_temperature) * (magmomSecondorder - magmomFirstorder * magmomFirstorder);
+    float U4 = 1 - magmomFourthorder / (3 * magmomSecondorder * magmomSecondorder);
+    float E = energyFirstorder;
+    float HeatCapacity = m_atomnum * m_atomnum / (m_kB * m_temperature * m_temperature) * (energySecondorder - energyFirstorder * energyFirstorder);
 
     m_tlog << getCurrentTime().time_string << " [SimEnvironment] Parameters are:" << std::endl;
     m_tlog << getCurrentTime().time_string << " [SimEnvironment] Temperature: " << m_temperature << std::endl;
@@ -822,15 +770,15 @@ void SimEnvironment::writeMagneticMomentsToFile(std::string path)
         for (const auto& value : std::get<1>(m_atomCoordinates[i])) {
             outFile << formatDouble(value, 9, 5) << ' ';
         }
-        double sumx, sumy, sumz;
-        double sumxnorm, sumynorm, sumznorm;
+        float sumx, sumy, sumz;
+        float sumxnorm, sumynorm, sumznorm;
         sumx = sumy = sumz = 0.;
         for (int j = 0; j < m_magmomsHistory.size(); j++) {
             sumx += m_magmomsHistory[j][i][0];
             sumy += m_magmomsHistory[j][i][1];
             sumz += m_magmomsHistory[j][i][2];
         }
-        double norm = std::sqrt(sumx * sumx + sumy * sumy + sumz * sumz);
+        float norm = std::sqrt(sumx * sumx + sumy * sumy + sumz * sumz);
 
         outFile << formatDouble(sumx / norm, 9, 5) << ' ';
         outFile << formatDouble(sumy / norm, 9, 5) << ' ';
