@@ -55,8 +55,9 @@ std::tuple<int, int, double, bool, bool, bool, int, std::string> extractLinks(co
     bool isNearestNeighbourY = false;
     bool isNearestNeighbourZ = false;
     
-    if(values.size() == 15)
-        if((abs(static_cast<int>(values[12])) + abs(static_cast<int>(values[13])) + abs(static_cast<int>(values[14]))) < 2)
+    if(values.size() == 19)
+        if(((abs(static_cast<int>(values[12])) + abs(static_cast<int>(values[13])) + abs(static_cast<int>(values[14]))) < 2) 
+            && static_cast<int>(values[1]) == static_cast<int>(values[3]))
         {
             if (abs(static_cast<int>(values[12])) == 1)
                 isNearestNeighbourX = true;
@@ -509,11 +510,11 @@ void SimEnvironment::setTemperature(double temp)
 
 void SimEnvironment::setMagneticField(double xH, double yH, double zH)
 {
-    if (abs(xH) > 0.00001)
+    if (abs(xH) > 0.00000001)
         m_magDir = 0;
-    else if (abs(yH) > 0.00001)
+    else if (abs(yH) > 0.00000001)
         m_magDir = 1;
-    else if (abs(zH) > 0.00001)
+    else if (abs(zH) > 0.00000001)
         m_magDir = 2;
     else
         m_magDir = -1;

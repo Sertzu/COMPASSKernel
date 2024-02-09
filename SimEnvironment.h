@@ -99,7 +99,7 @@ private:
 
     ThreadLogger m_tlog;
 	unsigned int m_threadnum;
-    int m_workerCount = 6;
+    int m_workerCount = 8;
 
 	std::vector<std::vector<std::tuple<int, double>>> m_links;
     std::vector<std::vector<std::vector<int>>> m_linksNN;
