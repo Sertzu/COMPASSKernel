@@ -264,7 +264,7 @@ void ScriptHandler::runScript()
             simRunner_.SETOUT(command[1]);
             break;
         case(ScriptOption::LOADCHECKPOINT):
-            //simRunner_.LOADCHECKPOINT(command[1]);
+            simRunner_.LOADCHECKPOINT(command[1]);
             break;
         case(ScriptOption::SETMAGMOMAUTOSAVE):
             simRunner_.SETMAGMOMAUTOSAVE(command[1]);

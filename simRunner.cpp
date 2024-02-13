@@ -31,6 +31,13 @@ void SimRunner::SETOUT(std::string outFile)
 	print("ENVIRONMENT OUTPUT SET TO FILE: " + simVars.outputPath);
 }
 
+void SimRunner::LOADCHECKPOINT(std::string inPath)
+{
+	simEnv->readMagneticMomentsFromFile(inPath);
+
+	print("ENVIRONMENT READ MAGMOMS FROM: " + inPath);
+}
+
 void SimRunner::SAVECHECKPOINT(std::string outPath)
 {
 	simEnv->writeMagneticMomentsToFile(outPath);

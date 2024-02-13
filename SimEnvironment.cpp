@@ -4,7 +4,7 @@
 
 namespace fs = std::filesystem;
 
-inline void dotProduct(float& sum, const std::vector<float>& vec1, const std::vector<float>& vec2) {
+inline void dotProduct(float& sum, const Vec3& vec1, const Vec3& vec2) {
     sum = vec1[0] * vec2[0] + vec1[1] * vec2[1] + vec1[2] * vec2[2];
 }
 
@@ -215,7 +215,7 @@ std::vector<std::tuple<int, std::vector<float>>> SimEnvironment::getAtomCoordina
     return m_atomCoordinates;
 }
 
-std::vector<std::vector<float>> SimEnvironment::getMagmoms()
+std::vector<Vec3> SimEnvironment::getMagmoms()
 {
     return m_magmoms;
 }
@@ -249,14 +249,11 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approachTemp, floa
         m_tlog << getCurrentTime().time_string << " [Kernel] Initial Magnetic Field is " << initialH << "T and Approachvalue is " << approachValue << std::endl;
     }
 
-    std::vector<std::vector<float>> randomNumberVector3D(m_atomnum, { 0.0 ,0.0 , 0.0});
+    std::vector<Vec3> randomNumberVector3D(m_atomnum, { 0.0 ,0.0 , 0.0});
     std::vector<float> rateVector(m_atomnum, 0.0);
     std::vector<float> acceptanceVector(m_atomnum, 0.0);
 
-    //generateRandomVecArray(randomNumberVector3D);
-    //generateAcceptanceVec(acceptanceVector);
-
-    std::vector<std::vector<float>> randomNumberVector3DSwap(m_atomnum, { 0.0 ,0.0 , 0.0 });
+    std::vector<Vec3> randomNumberVector3DSwap(m_atomnum, { 0.0 ,0.0 , 0.0 });
     std::vector<float> acceptanceVectorSwap(m_atomnum, 0.0);
 
     BS::thread_pool pool;
@@ -271,7 +268,7 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approachTemp, floa
     m_energyHistory.resize(steps);
     std::future<float> energy;
 
-    std::vector<std::vector<std::vector<float>>> magmomCopy;
+    std::vector<std::vector<Vec3>> magmomCopy;
     for (int i = 0; i < m_workerCount; i++)
     {
         magmomCopy.push_back(m_magmoms);
@@ -281,7 +278,7 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approachTemp, floa
     std::barrier syncPointInit(m_workerCount + 1);
     std::barrier syncPointRun(m_workerCount + 1);
 
-    auto mcWorker = [&](std::stop_token stopToken, float& beta, std::vector<std::vector<float>> &magmoms, std::vector<std::vector<float>>& randomNumberVector3D, std::vector<float> &acceptanceVector, int start, int end)
+    auto mcWorker = [&](std::stop_token stopToken, float& beta, std::vector<Vec3> &magmoms, std::vector<Vec3>& randomNumberVector3D, std::vector<float> &acceptanceVector, int start, int end)
     {
         std::uniform_real_distribution<> randomizer(0.0, 1.0);
         std::random_device randDevice;
@@ -289,7 +286,7 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approachTemp, floa
         auto atomlinks = m_links;
         float rate = 0.0;
         float acceptor = 0.0;
-        std::vector<std::vector<float>> randomVec = { {0.0,0.0,0.0} };
+        std::vector<Vec3> randomVec = { {0.0f,0.0f,0.0f} };
         generateRandomVecArray(randomVec, randomizer, generator);
 
         syncPointInit.arrive_and_wait();
@@ -326,7 +323,7 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approachTemp, floa
     for (int i = 0; i < m_workerCount; ++i) {
         int start = startIndices[i];
         int end = (i == m_workerCount - 1) ? m_magmoms.size() : startIndices[i + 1];
-        mcWorkers.emplace_back(mcWorker, std::ref(beta), std::ref(magmomCopy[i]), std::ref(randomNumberVector3D),std::ref(acceptanceVector), start, end);
+        mcWorkers.emplace_back(mcWorker, std::ref(beta), std::ref(magmomCopy[i]), std::ref(randomNumberVector3D), std::ref(acceptanceVector), start, end);
     }
 
     for (int step = 1; step <= steps; step++)
@@ -530,7 +527,7 @@ std::string SimEnvironment::getOutputPath()
     return m_outputPath;
 }
 
-float SimEnvironment::energy_diff_calculator(const int& index, const std::vector<float>& oldMom, const std::vector<float>& newMom, const std::vector<std::vector<float>>& magmoms, const std::vector<std::vector<std::tuple<int, float>>>& atomlinks)
+float SimEnvironment::energy_diff_calculator(const int& index, const Vec3& oldMom, const Vec3& newMom, const std::vector<Vec3>& magmoms, const std::vector<std::vector<std::tuple<int, float>>>& atomlinks)
 {
     float Hold = 0.0;
     float Hnew = 0.0;
@@ -569,7 +566,7 @@ float SimEnvironment::energy_diff_calculator(const int& index, const std::vector
     return Hnew - Hold;
 }
 
-float SimEnvironment::rate_calculator(int& index, float& beta, std::vector<float>& oldMom, std::vector<float>& newMom, const std::vector<std::vector<float>>& magmoms,const std::vector<std::vector<std::tuple<int, float>>>& atomlinks)
+float SimEnvironment::rate_calculator(int& index, float& beta, Vec3& oldMom, Vec3& newMom, const std::vector<Vec3>& magmoms,const std::vector<std::vector<std::tuple<int, float>>>& atomlinks)
 {
     return std::exp(-energy_diff_calculator(index, oldMom, newMom, magmoms, atomlinks) * beta);
 }
@@ -621,7 +618,7 @@ float SimEnvironment::energy_calculator()
     return energy;
 }
 
-std::vector<float> SimEnvironment::generateRandomVecSingle()
+Vec3 SimEnvironment::generateRandomVecSingle()
 {
     float C1, C2, Csq;
 
@@ -638,12 +635,12 @@ std::vector<float> SimEnvironment::generateRandomVecSingle()
     A = 2 * C1 * std::sqrt((1 - Csq));
     B = 2 * C2 * std::sqrt((1 - Csq));
     C = 1 - 2 * Csq;
-    std::vector<float> ranvec = { A, B, C};
+    Vec3 ranvec = { A, B, C};
     return ranvec;
 
 }
 
-void SimEnvironment::generateRandomVecArray(std::vector<std::vector<float>>& vecIn, std::uniform_real_distribution<>& randomizer, std::mt19937& generator)
+inline void SimEnvironment::generateRandomVecArray(std::vector<Vec3>& vecIn, std::uniform_real_distribution<>& randomizer, std::mt19937& generator)
 {
     float C1, C2, Csq;
 
@@ -791,4 +788,16 @@ void SimEnvironment::writeMagneticMomentsToFile(std::string path)
 
     // Close the output file
     outFile.close();
+}
+
+void SimEnvironment::readMagneticMomentsFromFile(std::string path)
+{
+    MomentReader reader(path);
+
+    auto temp_mag = reader.get_magmoms();
+    if (m_magmoms.size() != temp_mag.size())
+    {
+        throw std::runtime_error("Magmom sizes do not match!");
+    }
+    m_magmoms = temp_mag;
 }

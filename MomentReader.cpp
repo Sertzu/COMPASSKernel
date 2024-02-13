@@ -1,25 +1,16 @@
 #include "MomentReader.h"
 
-MomentReader::MomentReader()
-{
-}
-
 MomentReader::MomentReader(std::string momentPath)
 {
-    magmoms = readMagmomFile(momentPath);
+    readMagmomFile(momentPath);
 }
 
-std::vector<std::vector<double>> MomentReader::get_magmoms()
+std::vector<Vec3> MomentReader::get_magmoms()
 {
-	return magmoms;
+	return m_magmoms;
 }
 
-std::vector<std::tuple<int, std::vector<double>>> MomentReader::get_atomCoordinates()
-{
-	return std::vector<std::tuple<int, std::vector<double>>>();
-}
-
-std::vector<std::vector<double>> MomentReader::readMagmomFile(const std::string& fileName)
+void MomentReader::readMagmomFile(const std::string& fileName)
 {
     // Open the file
     std::ifstream file(fileName);
@@ -28,7 +19,7 @@ std::vector<std::vector<double>> MomentReader::readMagmomFile(const std::string&
         throw std::runtime_error("Could not open file");
     }
 
-    std::vector<std::vector<double>> vectors;
+    std::vector<Vec3> temp_magmoms;
     std::string line;
 
     while (std::getline(file, line)) {
@@ -39,21 +30,22 @@ std::vector<std::vector<double>> MomentReader::readMagmomFile(const std::string&
 
         std::istringstream iss(line);
         double value;
-        std::vector<double> temp;
+        Vec3 temp = { 0.f,0.f,1.f };
+        int pos = 0;
 
-        for (int i = 0; i < 9; ++i) { // assuming there are always 9 values in a line
+        for (int i = 0; i < 6; ++i) { // assuming there are always 6 values in a line
             if (!(iss >> value)) {
                 throw std::runtime_error("File format error");
             }
 
             // Only append 4th, 5th and 6th values to temporary vector
             if (i >= 3 && i <= 5) {
-                temp.push_back(value);
+                temp[pos] = value;
+                pos++;
             }
         }
 
-        vectors.push_back(temp); // Append temporary vector to final vector
+        temp_magmoms.push_back(temp); // Append temporary vector to final vector
     }
-
-    return vectors;
+    m_magmoms = temp_magmoms;
 }

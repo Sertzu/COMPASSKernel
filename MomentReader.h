@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include <vector>
+#include <array>
 #include <iostream>
 #include <fstream>
 #include <filesystem>
@@ -12,15 +13,15 @@
 #include <map>
 #include <algorithm>
 
+typedef std::array<float, 3> Vec3;
+
 class MomentReader {
 public:
-	MomentReader();
 	MomentReader(std::string momentPath);
-	std::vector<std::vector<double>> get_magmoms();
-	std::vector<std::tuple<int, std::vector<double>>> get_atomCoordinates();
+	std::vector<Vec3> get_magmoms();
 private:
-	std::vector<std::vector<double>> readMagmomFile(const std::string& fileName);
+	MomentReader();
+	void readMagmomFile(const std::string& fileName);
 
-	std::vector<std::vector<double>> magmoms;
-	std::vector<std::tuple<int, std::vector<double>>> atomCoordinates;
+	std::vector<Vec3> m_magmoms;
 };

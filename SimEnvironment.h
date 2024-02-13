@@ -13,6 +13,7 @@
 #include <array> 
 
 #include "helpers.h"
+#include "MomentReader.h"
 #include "timeUtility.h"
 #include "BS_thread_pool.hpp"
 #include <thread>
@@ -71,7 +72,7 @@ public:
     std::vector<std::vector<std::tuple<int, float>>> getLinks();
     std::vector<std::vector<std::vector<int>>> getLinksNN();
     std::vector<std::tuple<int, std::vector<float>>> getAtomCoordinates();
-    std::vector<std::vector<float>> getMagmoms();
+    std::vector<Vec3> getMagmoms();
 
 	void runSim(int steps, bool measurement, bool approachTemp = 0, float initialtemp = 300, bool approachMag = 0, float initialH = 0.0);
 	void setTemperature(float temp);
@@ -87,29 +88,30 @@ public:
 	std::string getOutputPath();
 	std::vector<double> getParameters();
     void writeMagneticMomentsToFile(std::string path);
+    void readMagneticMomentsFromFile(std::string path);
 private:
 
-	float energy_diff_calculator(const int& index,const std::vector<float>& oldMom,const std::vector<float>& newMom, const std::vector<std::vector<float>>& magmoms, const std::vector<std::vector<std::tuple<int, float>>>& atomlinks);
-    float rate_calculator(int& index,float& beta, std::vector<float>& oldMom, std::vector<float>& newMom, const std::vector<std::vector<float>>& magmoms, const std::vector<std::vector<std::tuple<int, float>>>& atomlinks);
-	float energy_calculator();
-	std::vector<float> generateRandomVecSingle();
+    float energy_diff_calculator(const int& index,const Vec3& oldMom,const Vec3& newMom, const std::vector<Vec3>& magmoms, const std::vector<std::vector<std::tuple<int, float>>>& atomlinks);
+    float rate_calculator(int& index,float& beta, Vec3& oldMom, Vec3& newMom, const std::vector<Vec3>& magmoms, const std::vector<std::vector<std::tuple<int, float>>>& atomlinks);
+    float energy_calculator();
+    Vec3 generateRandomVecSingle();
 
     void generateAcceptanceVec(std::vector<float>& vecIn);
-    void generateRandomVecArray(std::vector<std::vector<float>>& vecIn, std::uniform_real_distribution<>& randomizer, std::mt19937& generator);
+    void generateRandomVecArray(std::vector<Vec3>& vecIn, std::uniform_real_distribution<>& randomizer, std::mt19937& generator);
 
     ThreadLogger m_tlog;
 	unsigned int m_threadnum;
 
 	std::vector<std::vector<std::tuple<int, float>>> m_links;
     std::vector<std::vector<std::vector<int>>> m_linksNN;
-	std::vector<std::vector<float>> m_magmoms;
+	std::vector<Vec3> m_magmoms;
     std::vector<std::tuple<int, std::vector<float>>> m_atomCoordinates;
     std::vector<int> m_atomTypes;
     std::vector<std::string> m_atomNames;
 
-    std::vector<std::vector<std::vector<float>>> m_magmomsHistory;
+    std::vector<std::vector<Vec3>> m_magmomsHistory;
 	std::vector<float> m_meanmagmomsHistory;
-    std::vector<std::array<float, 3>> m_meanRawMagmomsHistory;
+    std::vector<Vec3> m_meanRawMagmomsHistory;
 	std::vector<float> m_energyHistory;
 
 	std::string m_inputPath;
