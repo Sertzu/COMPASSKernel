@@ -103,29 +103,6 @@ void extractLinksAndCoordinates(const std::string& line, std::tuple<int, int, fl
     std::get<1>(std::get<8>(values_in))[2] = values[11];
 }
 
-
-std::tuple<int, std::vector<float>> extractCoordinates(const std::string& line)
-{
-    std::istringstream iss(line);
-    int first, third, counter;
-    float last;
-    static std::vector<float> values(20, 0.0);
-    float value;
-    static std::vector<float> coords{0.0,0.0,0.0};
-    counter = 0;
-    while (iss >> value && counter < 12) {
-        values[counter] = value;
-        counter++;
-    }
-
-    first = static_cast<int>(values[0]);
-    coords[0] = values[9];
-    coords[1] = values[10];
-    coords[2] = values[11];
-
-    return std::make_tuple(first, coords);
-}
-
 SimEnvironment::SimEnvironment()
 {
     m_inputPath = "";
@@ -186,6 +163,14 @@ SimEnvironment::SimEnvironment(std::string input, std::string output, float temp
         m_atomNames[std::get<0>(values) - 1] = std::get<7>(values);
 
     }
+
+    for (int i = 0; i < m_atomTypes.size(); ++i) {
+        // Add to map if type has not been seen before
+        if (m_uniqueAtomTypes.insert(m_atomTypes[i]).second) {
+            m_atomTypeToName[m_atomTypes[i]] = m_atomNames[i];
+        }
+    }
+
     m_singleIonAnisotropyTerm = { 0.0, 0.0, 0.0 };
     m_compassAnisotropyTerm = { 0.0, 0.0, 0.0 };
     m_zeemanTerm = { 0.0, 0.0, 0.0 };
@@ -401,6 +386,8 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approachTemp, floa
             m_meanRawMagmomsHistory[step - 1][0] = M1;
             m_meanRawMagmomsHistory[step - 1][1] = M2;
             m_meanRawMagmomsHistory[step - 1][2] = M3;
+
+
 
             energy = pool.submit(&SimEnvironment::energy_calculator, this);
             //energyHistory[step - 1] = energy_calculator();

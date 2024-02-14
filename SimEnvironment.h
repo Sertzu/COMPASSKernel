@@ -11,6 +11,7 @@
 #include <cmath>
 #include <algorithm>
 #include <array> 
+#include <set>
 
 #include "helpers.h"
 #include "MomentReader.h"
@@ -106,8 +107,11 @@ private:
     std::vector<std::vector<std::vector<int>>> m_linksNN;
 	std::vector<Vec3> m_magmoms;
     std::vector<std::tuple<int, std::vector<float>>> m_atomCoordinates;
+
     std::vector<int> m_atomTypes;
     std::vector<std::string> m_atomNames;
+    std::set<int> m_uniqueAtomTypes;
+    std::unordered_map<int, std::string> m_atomTypeToName;
 
     std::vector<std::vector<Vec3>> m_magmomsHistory;
 	std::vector<float> m_meanmagmomsHistory;
