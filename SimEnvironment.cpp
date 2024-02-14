@@ -138,6 +138,8 @@ SimEnvironment::SimEnvironment(std::string input, std::string output, float temp
     m_atomTypes.resize(m_atomnum);
     m_atomNames.resize(m_atomnum);
 
+    m_individualAtomnum.fill(0);
+
     auto coords = std::get<8>(values);
 
     for (int i = 0; i < lines.size(); i++)
@@ -161,7 +163,6 @@ SimEnvironment::SimEnvironment(std::string input, std::string output, float temp
         m_atomCoordinates[std::get<0>(coords) - 1] = coords;
         m_atomTypes[std::get<0>(values) - 1] = std::get<6>(values);
         m_atomNames[std::get<0>(values) - 1] = std::get<7>(values);
-
     }
 
     for (int i = 0; i < m_atomTypes.size(); ++i) {
@@ -169,6 +170,7 @@ SimEnvironment::SimEnvironment(std::string input, std::string output, float temp
         if (m_uniqueAtomTypes.insert(m_atomTypes[i]).second) {
             m_atomTypeToName[m_atomTypes[i]] = m_atomNames[i];
         }
+        m_individualAtomnum[m_atomTypes[i]]++;
     }
 
     m_singleIonAnisotropyTerm = { 0.0, 0.0, 0.0 };
@@ -241,16 +243,24 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approachTemp, floa
     std::vector<Vec3> randomNumberVector3DSwap(m_atomnum, { 0.0 ,0.0 , 0.0 });
     std::vector<float> acceptanceVectorSwap(m_atomnum, 0.0);
 
+    std::array<float, 20> individualEnergy;
+    std::array<float, 20> individualMeanmagmoms;
+
     BS::thread_pool pool;
     m_magmomsHistory.clear();
     m_meanmagmomsHistory.clear();
     m_meanRawMagmomsHistory.clear();
+    m_individualMeanmagmomsHistory.clear();
 
     m_energyHistory.clear();
+    m_individualEnergyHistory.clear();
 
     m_meanmagmomsHistory.resize(steps);
     m_meanRawMagmomsHistory.resize(steps);
+    m_individualMeanmagmomsHistory.resize(steps);
+
     m_energyHistory.resize(steps);
+    m_individualEnergyHistory.resize(steps);
     std::future<float> energy;
 
     std::vector<std::vector<Vec3>> magmomCopy;
@@ -387,9 +397,30 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approachTemp, floa
             m_meanRawMagmomsHistory[step - 1][1] = M2;
             m_meanRawMagmomsHistory[step - 1][2] = M3;
 
+            individualMeanmagmoms.fill(0.f);
 
+            for (const auto& type : m_uniqueAtomTypes)
+            {
+                M1 = M2 = M3 = 0.;
+                for (int i = 0; i < m_atomnum; i++)
+                {
+                    if(type == m_atomTypes[i])
+                    {
+                        M1 += m_magmoms[i][0];
+                        M2 += m_magmoms[i][1];
+                        M3 += m_magmoms[i][2];
+                    }
+                }
+                M1 /= m_individualAtomnum[type];
+                M2 /= m_individualAtomnum[type];
+                M3 /= m_individualAtomnum[type];
+                individualMeanmagmoms[type] = std::sqrt(M1 * M1 + M2 * M2 + M3 * M3);
+            }
+            m_individualMeanmagmomsHistory[step - 1] = individualMeanmagmoms;
 
-            energy = pool.submit(&SimEnvironment::energy_calculator, this);
+            individualEnergy.fill(0.f);
+
+            energy = pool.submit(&SimEnvironment::energy_calculator, this, std::ref(individualEnergy));
             //energyHistory[step - 1] = energy_calculator();
             if (steps - step < m_MAXMAGMOMHISTSIZE)
                 m_magmomsHistory.push_back(m_magmoms);
@@ -398,12 +429,18 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approachTemp, floa
         if (step == 1)
         {
             if (measurement)
+            {
                 m_energyHistory[step - 1] = energy.get();
+                m_individualEnergyHistory[step - 1] = individualEnergy;
+            }
             syncPointInit.arrive_and_wait();
         }
 
         if (measurement && step != 1)
+        {
             m_energyHistory[step - 1] = energy.get();
+            m_individualEnergyHistory[step - 1] = individualEnergy;
+        }
 
         syncPointRun.arrive_and_wait();
 
@@ -558,50 +595,56 @@ float SimEnvironment::rate_calculator(int& index, float& beta, Vec3& oldMom, Vec
     return std::exp(-energy_diff_calculator(index, oldMom, newMom, magmoms, atomlinks) * beta);
 }
 
-float SimEnvironment::energy_calculator()
+float SimEnvironment::energy_calculator(std::array<float, 20>& individualEnergy)
 {
-    float energy = 0.0;
-    static BS::thread_pool calcpool;
+    static BS::thread_pool calcpool(m_workerCount);
     static std::mutex energyLock;
 
     calcpool.push_loop(m_atomnum,
         [&](const int a, const int b)
         {
-            float tempEnergy = 0.0;
+            std::array<float, 20> individualEnergyT;
+            individualEnergyT.fill(0.f);
+
             int link;
             float param, sum;
             for (int i = a; i < b; i++)
             {
+
                 for (auto linkforatom : m_links[i])
                 {
                     link = std::get<0>(linkforatom);
                     param = std::get<1>(linkforatom);
                     dotProduct(sum, m_magmoms[i], m_magmoms[link]);
-                    tempEnergy -= sum * param * 0.5;
+                    individualEnergyT[m_atomTypes[i]] -= sum * param * 0.5;
                 }
                 // Single Ion anisotropy + Zeeman Term
                 for (int j = 0; j < 3; j++)
                 {
-                    tempEnergy -= m_magmoms[i][j] * m_magmoms[i][j] * m_singleIonAnisotropyTerm[j];
+                    individualEnergyT[m_atomTypes[i]] -= m_magmoms[i][j] * m_magmoms[i][j] * m_singleIonAnisotropyTerm[j];
 
                     // 0.672 -> unity conversion factor mu_B/k_B https://pubs.aip.org/aip/adv/article/5/12/127124/661186/Modeling-of-hysteresis-loops-by-Monte-Carlo
-                    tempEnergy -= m_magmoms[i][j] * m_zeemanTerm[j]; 
+                    individualEnergyT[m_atomTypes[i]] -= m_magmoms[i][j] * m_zeemanTerm[j];
                 }
                 // Compass anisotropy
                 if (m_enableCompassAnisotropy)
                     for (int j = 0; j < 3; j++)
                         for (auto linkforatom : m_linksNN[j][i])
                         {
-                            tempEnergy -= m_magmoms[i][j] * m_magmoms[linkforatom][j] * m_compassAnisotropyTerm[j];
+                            individualEnergyT[m_atomTypes[i]] -= m_magmoms[i][j] * m_magmoms[linkforatom][j] * m_compassAnisotropyTerm[j];
                         }
             }
             energyLock.lock();
-            energy += tempEnergy;
+            for (const auto& type : m_uniqueAtomTypes)
+                individualEnergy[type] += individualEnergyT[type];
             energyLock.unlock();
         });
 
     calcpool.wait_for_tasks();
 
+    float energy = 0.0;
+    for (const auto& type : m_uniqueAtomTypes)
+        energy += individualEnergy[type];
     return energy;
 }
 
@@ -653,6 +696,58 @@ void SimEnvironment::generateAcceptanceVec(std::vector<float>& vecIn)
     {
         vecIn[i] = ran(gen);
     }
+}
+
+std::vector<IndivdualParameters> SimEnvironment::getIndivdualParameters()
+{
+    std::vector<IndivdualParameters> returnVals;
+
+    for(const auto& type : m_uniqueAtomTypes)
+    {
+        IndivdualParameters tempParam;
+        float magmomFirstorder = 0.0;
+        float magmomSecondorder = 0.0;
+        float magmomFourthorder = 0.0;
+        
+        for (const auto& values : m_individualMeanmagmomsHistory)
+        {
+            float tempVal = values[type];
+
+            magmomFirstorder += tempVal;
+            magmomSecondorder += tempVal * tempVal;
+            magmomFourthorder += tempVal * tempVal * tempVal * tempVal;
+        }
+
+        magmomFirstorder /= m_individualMeanmagmomsHistory.size();
+        magmomSecondorder /= m_individualMeanmagmomsHistory.size();
+        magmomFourthorder /= m_individualMeanmagmomsHistory.size();
+
+        float energyFirstorder = 0.0;
+        float energySecondorder = 0.0;
+        for (const auto& values : m_individualEnergyHistory)
+        {
+            energyFirstorder += values[type] / m_individualAtomnum[type];
+            energySecondorder += values[type] * values[type] / (m_individualAtomnum[type] * m_individualAtomnum[type]);
+        }
+        energyFirstorder /= m_individualEnergyHistory.size();
+        energySecondorder /= m_individualEnergyHistory.size();
+
+        float MagMom = magmomFirstorder;
+        float Chi = m_atomnum / (m_kB * m_temperature) * (magmomSecondorder - magmomFirstorder * magmomFirstorder);
+        float U4 = 1 - magmomFourthorder / (3 * magmomSecondorder * magmomSecondorder);
+        float E = energyFirstorder;
+        float HeatCapacity = m_atomnum * m_atomnum / (m_kB * m_temperature * m_temperature) * (energySecondorder - energyFirstorder * energyFirstorder);
+
+        float magtotal = m_zeemanTerm[0] + m_zeemanTerm[1] + m_zeemanTerm[2];
+
+        std::vector<double> parameters = { m_temperature, MagMom, Chi, U4, E, HeatCapacity, m_singleIonAnisotropyTerm[2], magtotal, 0., 0., 0. };
+        tempParam.parameters = parameters;
+        tempParam.atomType = type;
+        tempParam.atomName = m_atomTypeToName[type];
+
+        returnVals.push_back(tempParam);
+    }
+    return returnVals;
 }
 
 std::vector<double> SimEnvironment::getParameters()

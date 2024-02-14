@@ -62,7 +62,13 @@ private:
     std::ofstream file;
 };
 
+struct IndivdualParameters
+{
+    std::string atomName;
+    int atomType = 0;
 
+    std::vector<double> parameters;
+};
 
 class SimEnvironment
 {
@@ -88,13 +94,14 @@ public:
 
 	std::string getOutputPath();
 	std::vector<double> getParameters();
+    std::vector<IndivdualParameters> getIndivdualParameters();
     void writeMagneticMomentsToFile(std::string path);
     void readMagneticMomentsFromFile(std::string path);
 private:
 
     float energy_diff_calculator(const int& index,const Vec3& oldMom,const Vec3& newMom, const std::vector<Vec3>& magmoms, const std::vector<std::vector<std::tuple<int, float>>>& atomlinks);
     float rate_calculator(int& index,float& beta, Vec3& oldMom, Vec3& newMom, const std::vector<Vec3>& magmoms, const std::vector<std::vector<std::tuple<int, float>>>& atomlinks);
-    float energy_calculator();
+    float energy_calculator(std::array<float, 20>& individualEnergy);
     Vec3 generateRandomVecSingle();
 
     void generateAcceptanceVec(std::vector<float>& vecIn);
@@ -118,9 +125,14 @@ private:
     std::vector<Vec3> m_meanRawMagmomsHistory;
 	std::vector<float> m_energyHistory;
 
+    std::vector<std::array<float, 20>> m_individualMeanmagmomsHistory;
+    std::vector<std::array<float, 20>> m_individualEnergyHistory;
+
 	std::string m_inputPath;
 	std::string m_outputPath;
 	int m_atomnum;
+    std::array<int, 20> m_individualAtomnum;
+
 	float m_temperature;
     bool m_enableCompassAnisotropy;
     bool m_useStaggeredMagnetization = false;
@@ -139,5 +151,5 @@ private:
 	std::mt19937 gen;
 	
     int m_statusSteps = 1000;
-    int m_workerCount = 8;
+    int m_workerCount = 12;
 };

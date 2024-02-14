@@ -49,7 +49,7 @@ void SimRunner::SETMAGMOMAUTOSAVE(std::string outPath)
 {
 	simVars.autoSaveMoments = true;
 	simVars.momentsPath = outPath;
-
+	simVars.individualAtomPath = outPath;
 	print("ENVIRONMENT WILL AUTOSAVE MAGMOMS TO: " + outPath);
 }
 
@@ -168,8 +168,12 @@ void SimRunner::MEASUREMENT(int steps)
 	simEnv->runSim(steps, true);
 
 	saveMeasurement(simEnv->getParameters());
+
 	if (simVars.autoSaveMoments)
+	{
 		simEnv->writeMagneticMomentsToFile(simVars.momentsPath);
+		saveIndividualParameters(simEnv->getIndivdualParameters());
+	}
 }
 
 void SimRunner::SWEEPTEMP(double targetTemp, double tempSteps, int approachSteps, int equilibSteps, int measurementSteps)
@@ -241,4 +245,11 @@ void SimRunner::saveMeasurement(std::vector<double> outVals)
 	print("SAVING MEASUREMENT TO FILE: " + simVars.outputPath);
 
 	writeResultsToFile(simVars.outputPath, outVals);
+}
+
+void SimRunner::saveIndividualParameters(std::vector<IndivdualParameters> parameters)
+{
+	print("SAVING INDIVIDUAL PARAMETERS!");
+	for (const auto& parameter : parameters)
+		writeResultsToFile(simVars.individualAtomPath + "/" + parameter.atomName + "_" + std::to_string(parameter.atomType), parameter.parameters);
 }

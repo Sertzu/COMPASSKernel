@@ -18,6 +18,7 @@ struct SimulationVariables
 	double temperature = -1;
 
 	std::string momentsPath = "";
+	std::string individualAtomPath = "";
 	bool autoSaveMoments = false;
 
 	double HStrength = 0.0;
@@ -70,7 +71,7 @@ private:
 	void print(const std::string toPrint);
 
 	void saveMeasurement(std::vector<double> outVals);
-
+	void saveIndividualParameters(std::vector<IndivdualParameters> params);
 	std::unique_ptr<SimEnvironment> simEnv;
 	SettingsClass settings;
 	SimulationVariables simVars;
