@@ -50,6 +50,7 @@ void SimRunner::SETMAGMOMAUTOSAVE(std::string outPath)
 	simVars.autoSaveMoments = true;
 	simVars.momentsPath = outPath;
 	simVars.individualAtomPath = outPath;
+	simVars.correlationFunctionPath = outPath;
 	print("ENVIRONMENT WILL AUTOSAVE MAGMOMS TO: " + outPath);
 }
 
@@ -58,6 +59,20 @@ void SimRunner::SETMAGPATTERN(std::vector<double> mag_pattern)
 	simVars.mag_pattern = mag_pattern;
 	simEnv->setMagPattern(mag_pattern);
 	print("ENVIRONMENT SET MAGPATTERN AND WILL USE IT MOVING FORWARD!");
+}
+
+void SimRunner::SETWORKERCOUNT(int workerCount)
+{
+	if (workerCount > 0)
+	{
+		simVars.workerCount = workerCount;
+		simEnv->setWorkerCount(workerCount);
+		print("WORKER COUNT CHANGED");
+	}
+	else
+	{
+		print("WORKER COUNT DID NOT CHANGE, INVALID VALUE WAS PROVIDED");
+	}
 }
 
 void SimRunner::SETTEMP(double temp)
@@ -173,6 +188,7 @@ void SimRunner::MEASUREMENT(int steps)
 	{
 		simEnv->writeMagneticMomentsToFile(simVars.momentsPath);
 		saveIndividualParameters(simEnv->getIndivdualParameters());
+		simEnv->writeCorrelationFunction(simVars.correlationFunctionPath);
 	}
 }
 

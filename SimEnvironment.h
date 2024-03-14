@@ -12,14 +12,15 @@
 #include <algorithm>
 #include <array> 
 #include <set>
+#include <memory>
 
 #include "helpers.h"
 #include "MomentReader.h"
 #include "timeUtility.h"
 #include "BS_thread_pool.hpp"
+#include "3DGrid.h"
 #include <thread>
 #include <mutex>
-#include <wincrypt.h>
 #include <barrier>
 
 typedef std::array<float, 3> Vec3;
@@ -89,14 +90,18 @@ public:
     void setCompassAnisotropy(float xComp, float yComp, float zComp);
     void setOutputPath(std::string out);
     void setMagPattern(std::vector<double> mag_pattern);
+    void setWorkerCount(int workerCount);
+
 
     void setStatusSteps(int steps);
 
 	std::string getOutputPath();
 	std::vector<double> getParameters();
     std::vector<IndivdualParameters> getIndivdualParameters();
-    void writeMagneticMomentsToFile(std::string path);
-    void readMagneticMomentsFromFile(std::string path);
+
+    void writeMagneticMomentsToFile(const std::string& path);
+    void readMagneticMomentsFromFile(const std::string& path);
+    void writeCorrelationFunction(const std::string& path);
 private:
 
     float energy_diff_calculator(const int& index,const Vec3& oldMom,const Vec3& newMom, const std::vector<Vec3>& magmoms, const std::vector<std::vector<std::tuple<int, float>>>& atomlinks);
@@ -107,12 +112,15 @@ private:
     void generateAcceptanceVec(std::vector<float>& vecIn);
     void generateRandomVecArray(std::vector<Vec3>& vecIn, std::uniform_real_distribution<>& randomizer, std::mt19937& generator);
 
+    std::array<std::vector<float>, 3> calculateCorrelationFunction(int atomType);
+
     ThreadLogger m_tlog;
 	unsigned int m_threadnum;
 
 	std::vector<std::vector<std::tuple<int, float>>> m_links;
     std::vector<std::vector<std::vector<int>>> m_linksNN;
 	std::vector<Vec3> m_magmoms;
+    std::vector<std::array<int, 3>> m_atomGridPos;
     std::vector<std::tuple<int, std::vector<float>>> m_atomCoordinates;
 
     std::vector<int> m_atomTypes;
@@ -120,6 +128,7 @@ private:
     std::set<int> m_uniqueAtomTypes;
     std::unordered_map<int, std::string> m_atomTypeToName;
 
+    std::vector<std::vector<std::unique_ptr<Array3D>>> m_gridHistory;
     std::vector<std::vector<Vec3>> m_magmomsHistory;
 	std::vector<float> m_meanmagmomsHistory;
     std::vector<Vec3> m_meanRawMagmomsHistory;
@@ -132,6 +141,7 @@ private:
 	std::string m_outputPath;
 	int m_atomnum;
     std::array<int, 20> m_individualAtomnum;
+    std::array<int, 3> m_gridSize;
 
 	float m_temperature;
     bool m_enableCompassAnisotropy;
@@ -151,5 +161,6 @@ private:
 	std::mt19937 gen;
 	
     int m_statusSteps = 1000;
-    int m_workerCount = 12;
+    int m_gridSteps = 10;
+    int m_workerCount = 1;
 };

@@ -19,7 +19,10 @@ struct SimulationVariables
 
 	std::string momentsPath = "";
 	std::string individualAtomPath = "";
+	std::string correlationFunctionPath = "";
+
 	bool autoSaveMoments = false;
+	int workerCount = 1;
 
 	double HStrength = 0.0;
 	XYZ HDir = XYZ::X;
@@ -48,6 +51,7 @@ public:
 	void SAVECHECKPOINT(std::string outPath = "");
 	void SETMAGMOMAUTOSAVE(std::string outPath = "");
 	void SETMAGPATTERN(std::vector<double> mag_pattern);
+	void SETWORKERCOUNT(int workerCount);
 
 	void SETTEMP(double temp);
 	void SETMAGFIELD(double HVal, XYZ dir);

@@ -25,6 +25,7 @@ enum class ScriptOption {
     SETEASYPLANE,
     SETCOMPASSANISO,
     SETMAGPATTERN,
+    SETWORKERCOUNT,
 
     INVALID
 };

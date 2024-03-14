@@ -31,7 +31,8 @@ ScriptOption stringToOptionEnum(const std::string& str) {
         {"SWEEPMAG", ScriptOption::SWEEPMAG},
         {"SETEASYPLANE", ScriptOption::SETEASYPLANE},
         {"SETCOMPASSANISO", ScriptOption::SETCOMPASSANISO},
-        {"SETMAGPATTERN", ScriptOption::SETMAGPATTERN}
+        {"SETMAGPATTERN", ScriptOption::SETMAGPATTERN},
+        {"SETWORKERCOUNT", ScriptOption::SETWORKERCOUNT}
     };
 
     auto it = strToEnumMap.find(str);
@@ -195,6 +196,10 @@ void ScriptHandler::validateScript()
                 if (command.size() != 2) { validcheck_ = false; print("COMMAND EQUILIB INVALID"); }
                 if (!canBeConvertedToInt(command[1])) { validcheck_ = false; print("COMMAND EQUILIB: STEPS IS NOT VALID "); }
                 break;
+            case(ScriptOption::SETWORKERCOUNT):
+                if (command.size() != 2) { validcheck_ = false; print("COMMAND SETWORKERCOUNT INVALID"); }
+                if (!canBeConvertedToInt(command[1])) { validcheck_ = false; print("COMMAND SETWORKERCOUNT: WORKER COUNT IS NOT VALID "); }
+                break;
             case(ScriptOption::MEASUREMENT):
                 if (command.size() != 2) { validcheck_ = false; print("COMMAND MEASUREMENT INVALID"); }
                 if (!canBeConvertedToInt(command[1])) { validcheck_ = false; print("COMMAND MEASUREMENT: STEPS IS NOT VALID "); }
@@ -310,6 +315,9 @@ void ScriptHandler::runScript()
             break;
         case(ScriptOption::MEASUREMENT):
             simRunner_.MEASUREMENT(std::stoi(command[1]));
+            break;
+        case(ScriptOption::SETWORKERCOUNT):
+            simRunner_.SETWORKERCOUNT(std::stoi(command[1]));
             break;
         case(ScriptOption::SWEEPTEMP):
             simRunner_.SWEEPTEMP(std::stod(command[1]), std::stod(command[2]), std::stoi(command[3]), std::stoi(command[4]), std::stoi(command[5]));

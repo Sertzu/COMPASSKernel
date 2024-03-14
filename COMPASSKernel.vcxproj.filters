@@ -74,6 +74,9 @@
     <ClInclude Include="json.hpp">
       <Filter>Headerdateien</Filter>
     </ClInclude>
+    <ClInclude Include="3DGrid.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="inputs\SETTINGS.cfg">
@@ -89,6 +92,9 @@
       <Filter>Ressourcendateien</Filter>
     </None>
     <None Include="inputs\ScriptSFMO.comps">
+      <Filter>Ressourcendateien</Filter>
+    </None>
+    <None Include="inputs\ScriptEuRh2Si2.comps">
       <Filter>Ressourcendateien</Filter>
     </None>
   </ItemGroup>

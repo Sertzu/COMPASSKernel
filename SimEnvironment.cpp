@@ -8,6 +8,10 @@ inline void dotProduct(float& sum, const Vec3& vec1, const Vec3& vec2) {
     sum = vec1[0] * vec2[0] + vec1[1] * vec2[1] + vec1[2] * vec2[2];
 }
 
+inline float dotProduct(const PointXYZ& vec1, const PointXYZ& vec2) {
+    return vec1.x * vec2.x + vec1.y * vec2.y + vec1.z * vec2.z;
+}
+
 std::vector<std::string> read_file_without_comments(const std::string& file_path) {
     std::ifstream input_file(file_path);
     std::vector<std::string> lines;
@@ -39,7 +43,7 @@ std::vector<std::string> read_file_without_comments(const std::string& file_path
     return lines;
 }
 
-void extractLinksAndCoordinates(const std::string& line, std::tuple<int, int, float, bool, bool, bool, int, std::string, std::tuple<int, std::vector<float>>>& values_in) {
+void extractLinksAndCoordinates(const std::string& line, std::tuple<int, int, float, bool, bool, bool, int, std::string, std::tuple<int, std::vector<float>>, std::array<int, 3>>& values_in) {
     std::istringstream iss(line);
 
     float values[30]; 
@@ -101,6 +105,10 @@ void extractLinksAndCoordinates(const std::string& line, std::tuple<int, int, fl
     std::get<1>(std::get<8>(values_in))[0] = values[9];
     std::get<1>(std::get<8>(values_in))[1] = values[10];
     std::get<1>(std::get<8>(values_in))[2] = values[11];
+
+    std::get<9>(values_in)[0] = static_cast<int>(values[15]);
+    std::get<9>(values_in)[1] = static_cast<int>(values[16]);
+    std::get<9>(values_in)[2] = static_cast<int>(values[17]);
 }
 
 SimEnvironment::SimEnvironment()
@@ -125,9 +133,10 @@ SimEnvironment::SimEnvironment(std::string input, std::string output, float temp
     auto lines = read_file_without_comments(m_inputPath);
     m_tlog << getCurrentTime().time_string << " [SimEnvironment] Read input file, converting data!" << std::endl;
 
-    std::tuple<int, int, float, bool, bool, bool, int, std::string, std::tuple<int, std::vector<float>>> values;
+    std::tuple<int, int, float, bool, bool, bool, int, std::string, std::tuple<int, std::vector<float>>, std::array<int, 3>> values;
     extractLinksAndCoordinates(lines.back(), values);
 
+    m_gridSize = std::get<9>(values);
     m_atomnum = std::get<0>(values);
     m_linksNN.resize(3);
     m_links.resize(m_atomnum);
@@ -135,6 +144,7 @@ SimEnvironment::SimEnvironment(std::string input, std::string output, float temp
     m_linksNN[1].resize(m_atomnum);
     m_linksNN[2].resize(m_atomnum);
     m_atomCoordinates.resize(m_atomnum);
+    m_atomGridPos.resize(m_atomnum);
     m_atomTypes.resize(m_atomnum);
     m_atomNames.resize(m_atomnum);
 
@@ -145,6 +155,11 @@ SimEnvironment::SimEnvironment(std::string input, std::string output, float temp
     for (int i = 0; i < lines.size(); i++)
     {
         extractLinksAndCoordinates(lines[i], values);
+        auto gridPos = std::get<9>(values);
+
+        for(int j = 0; j < 2; j++)
+            if (gridPos[j] > m_gridSize[j]) m_gridSize[j] = gridPos[j];
+
         coords = std::get<8>(values);
         m_links[std::get<0>(values) - 1].push_back(std::make_tuple(std::get<1>(values) - 1, std::get<2>(values)));
         if(std::get<3>(values))
@@ -159,7 +174,7 @@ SimEnvironment::SimEnvironment(std::string input, std::string output, float temp
         {
             m_linksNN[2][std::get<0>(values) - 1].push_back(std::get<1>(values) - 1);
         }
-
+        m_atomGridPos[std::get<0>(coords) - 1] = gridPos;
         m_atomCoordinates[std::get<0>(coords) - 1] = coords;
         m_atomTypes[std::get<0>(values) - 1] = std::get<6>(values);
         m_atomNames[std::get<0>(values) - 1] = std::get<7>(values);
@@ -172,6 +187,8 @@ SimEnvironment::SimEnvironment(std::string input, std::string output, float temp
         }
         m_individualAtomnum[m_atomTypes[i]]++;
     }
+
+    m_gridHistory.resize(m_uniqueAtomTypes.size());
 
     m_singleIonAnisotropyTerm = { 0.0, 0.0, 0.0 };
     m_compassAnisotropyTerm = { 0.0, 0.0, 0.0 };
@@ -321,6 +338,17 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approachTemp, floa
         mcWorkers.emplace_back(mcWorker, std::ref(beta), std::ref(magmomCopy[i]), std::ref(randomNumberVector3D), std::ref(acceptanceVector), start, end);
     }
 
+    int gridHistorySize = steps / m_gridSteps;
+    if (measurement)
+    {
+        for (int i = 0; i < m_uniqueAtomTypes.size(); i++)
+        {
+            m_gridHistory[i].clear();
+            for (int j = 0; j < gridHistorySize; j++)
+                m_gridHistory[i].push_back(std::make_unique<Array3D>(m_gridSize[0] + 1, m_gridSize[1] + 1, m_gridSize[2] + 1));
+        }
+    }
+
     for (int step = 1; step <= steps; step++)
     {
         if (step % m_statusSteps == 0)
@@ -399,16 +427,34 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approachTemp, floa
 
             individualMeanmagmoms.fill(0.f);
 
+            bool recordGrid = step % m_gridSteps == 0;
+            PointXYZ currMom;
+            Array3D* gridPtr = nullptr;
+
             for (const auto& type : m_uniqueAtomTypes)
             {
+                if(recordGrid)
+                {
+                    gridPtr = m_gridHistory[type - 1][(step / m_gridSteps) - 1].get();
+                }
+
                 M1 = M2 = M3 = 0.;
                 for (int i = 0; i < m_atomnum; i++)
                 {
                     if(type == m_atomTypes[i])
                     {
-                        M1 += m_magmoms[i][0];
-                        M2 += m_magmoms[i][1];
-                        M3 += m_magmoms[i][2];
+                        currMom.x = m_magmoms[i][0];
+                        currMom.y = m_magmoms[i][1];
+                        currMom.z = m_magmoms[i][2];
+                        if (recordGrid)
+                        {
+                            auto gridPos = m_atomGridPos[i];
+                            // std::cout << type << " " << step / m_gridSteps << " " << gridPos[0] << " " << gridPos[1] << " " << gridPos[2] << std::endl;
+                            gridPtr->setPoint(gridPos[0], gridPos[1], gridPos[2], currMom);
+                        }
+                        M1 += currMom.x;
+                        M2 += currMom.y;
+                        M3 += currMom.z;
                     }
                 }
                 M1 /= m_individualAtomnum[type];
@@ -539,6 +585,11 @@ void SimEnvironment::setMagPattern(std::vector<double> mag_pattern)
 
     m_magnetizationPattern = tempVec;
     m_useStaggeredMagnetization = true;
+}
+
+void SimEnvironment::setWorkerCount(int workerCount)
+{
+    m_workerCount = workerCount;
 }
 
 void SimEnvironment::setStatusSteps(int steps)
@@ -705,13 +756,13 @@ std::vector<IndivdualParameters> SimEnvironment::getIndivdualParameters()
     for(const auto& type : m_uniqueAtomTypes)
     {
         IndivdualParameters tempParam;
-        float magmomFirstorder = 0.0;
-        float magmomSecondorder = 0.0;
-        float magmomFourthorder = 0.0;
+        double magmomFirstorder = 0.0;
+        double magmomSecondorder = 0.0;
+        double magmomFourthorder = 0.0;
         
         for (const auto& values : m_individualMeanmagmomsHistory)
         {
-            float tempVal = values[type];
+            double tempVal = values[type];
 
             magmomFirstorder += tempVal;
             magmomSecondorder += tempVal * tempVal;
@@ -722,8 +773,8 @@ std::vector<IndivdualParameters> SimEnvironment::getIndivdualParameters()
         magmomSecondorder /= m_individualMeanmagmomsHistory.size();
         magmomFourthorder /= m_individualMeanmagmomsHistory.size();
 
-        float energyFirstorder = 0.0;
-        float energySecondorder = 0.0;
+        double energyFirstorder = 0.0;
+        double energySecondorder = 0.0;
         for (const auto& values : m_individualEnergyHistory)
         {
             energyFirstorder += values[type] / m_individualAtomnum[type];
@@ -732,13 +783,13 @@ std::vector<IndivdualParameters> SimEnvironment::getIndivdualParameters()
         energyFirstorder /= m_individualEnergyHistory.size();
         energySecondorder /= m_individualEnergyHistory.size();
 
-        float MagMom = magmomFirstorder;
-        float Chi = m_atomnum / (m_kB * m_temperature) * (magmomSecondorder - magmomFirstorder * magmomFirstorder);
-        float U4 = 1 - magmomFourthorder / (3 * magmomSecondorder * magmomSecondorder);
-        float E = energyFirstorder;
-        float HeatCapacity = m_atomnum * m_atomnum / (m_kB * m_temperature * m_temperature) * (energySecondorder - energyFirstorder * energyFirstorder);
+        double MagMom = magmomFirstorder;
+        double Chi = m_atomnum / (m_kB * m_temperature) * (magmomSecondorder - magmomFirstorder * magmomFirstorder);
+        double U4 = 1 - magmomFourthorder / (3 * magmomSecondorder * magmomSecondorder);
+        double E = energyFirstorder;
+        double HeatCapacity = m_atomnum * m_atomnum / (m_kB * m_temperature * m_temperature) * (energySecondorder - energyFirstorder * energyFirstorder);
 
-        float magtotal = m_zeemanTerm[0] + m_zeemanTerm[1] + m_zeemanTerm[2];
+        double magtotal = m_zeemanTerm[0] + m_zeemanTerm[1] + m_zeemanTerm[2];
 
         std::vector<double> parameters = { m_temperature, MagMom, Chi, U4, E, HeatCapacity, m_singleIonAnisotropyTerm[2], magtotal, 0., 0., 0. };
         tempParam.parameters = parameters;
@@ -750,21 +801,143 @@ std::vector<IndivdualParameters> SimEnvironment::getIndivdualParameters()
     return returnVals;
 }
 
+std::array<std::vector<float>, 3> SimEnvironment::calculateCorrelationFunction(int atomType)
+{
+
+    std::vector<float> correlationX(m_gridSize[0] + 1);
+    std::vector<float> correlationY(m_gridSize[1] + 1);
+    std::vector<float> correlationZ(m_gridSize[2] + 1);
+
+    int histSize = m_gridHistory[atomType - 1].size();
+
+    for(int i = 0; i < histSize; i++)
+        for(int x = 0; x <= m_gridSize[0]; x++)
+            for (int y = 0; y <= m_gridSize[1]; y++)
+                for (int z = 0; z <= m_gridSize[2]; z++)
+                {   
+                    auto gridPtr = m_gridHistory[atomType - 1][i].get();
+                    PointXYZ spinL = gridPtr->getPoint(x, y, z);
+                    for (int j = 0; j <= m_gridSize[0]; j++)
+                    {
+                        PointXYZ spinR = gridPtr->getPoint(j, y, z);
+                        correlationX[abs(x - j)] += dotProduct(spinL, spinR);
+                    }
+                    for (int j = 0; j <= m_gridSize[1]; j++)
+                    {
+                        PointXYZ spinR = gridPtr->getPoint(x, j, z);
+                        correlationY[abs(y - j)] += dotProduct(spinL, spinR);
+                    }
+                    for (int j = 0; j <= m_gridSize[2]; j++)
+                    {
+                        PointXYZ spinR = gridPtr->getPoint(x, y, j);
+                        correlationZ[abs(z - j)] += dotProduct(spinL, spinR);
+                    }
+                }
+
+    float normFactor = 2 * (m_gridSize[0] + 1) * (m_gridSize[1] + 1) * (m_gridSize[2] + 1) * histSize;
+
+    for (auto& value : correlationX)
+    {
+        value /= normFactor;
+    }
+    for (auto& value : correlationY)
+    {
+        value /= normFactor;
+    }
+    for (auto& value : correlationZ)
+    {
+        value /= normFactor;
+    }
+    std::array<std::vector<float>, 3> tempArray;
+    tempArray[0] = correlationX;
+    tempArray[1] = correlationY;
+    tempArray[2] = correlationZ;
+    return tempArray;
+}
+
+void SimEnvironment::writeCorrelationFunction(const std::string& path)
+{
+    if (!fs::exists(path)) {
+        // The directory does not exist, create it
+        fs::create_directories(path);
+    }
+
+    for (const auto& atomType : m_uniqueAtomTypes)
+    {
+        std::string atomName = m_atomTypeToName[atomType];
+        std::string filePath = joinPaths(path, atomName + "_" + std::to_string(atomType) + "_correlationFunc.corr");
+        auto correlationFunc = calculateCorrelationFunction(atomType);
+        // Determine the length of the longest vector
+        size_t maxLength = 0;
+        for (const auto& vec : correlationFunc) {
+            maxLength = (maxLength) > (vec.size()) ? maxLength : vec.size();
+        }
+
+        std::ofstream file;
+        if (fs::exists(filePath))
+        {
+            file.open(filePath, std::ios::app);
+        }
+        else 
+        {
+            file.open(filePath, std::ios::out);
+            file << "#r  xCorr   yCorr   zCorr" << std::endl;
+        }
+
+        if (file.is_open()) 
+        {
+            std::string state = "! T=" + std::to_string(m_temperature) + " Hx=" + std::to_string(m_zeemanTerm[0]);
+            state += " Hy=" + std::to_string(m_zeemanTerm[1]);
+            state += " Hz=" + std::to_string(m_zeemanTerm[2]);
+            state += " Cx=" + std::to_string(m_compassAnisotropyTerm[0]);
+            state += " Cy=" + std::to_string(m_compassAnisotropyTerm[1]);
+            state += " Cz=" + std::to_string(m_compassAnisotropyTerm[2]);
+            state += " Kx=" + std::to_string(m_singleIonAnisotropyTerm[0]);
+            state += " Ky=" + std::to_string(m_singleIonAnisotropyTerm[1]);
+            state += " Kz=" + std::to_string(m_singleIonAnisotropyTerm[2]);
+            file << state << std::endl;
+            // Set the floating-point precision
+            file << std::fixed << std::setprecision(4);
+            // Print each row
+            for (size_t i = 1; i < maxLength; ++i) {
+                file << i; // Column 1: index
+                for (const auto& vec : correlationFunc) {
+                    // Check if the current vector is long enough
+                    if (i < vec.size()) {
+                        file << "  " << vec[i]; // Column 2, 3, 4: vector elements
+                    }
+                    else {
+                        file << "  " << 0.0; // Fill with 0.0 if the vector is too short
+                    }
+                }
+                file << std::endl;
+            }
+            file.close();
+        }
+        else 
+        {
+            std::cerr << "Failed to open file." << std::endl;
+        }
+    }
+}
+
 std::vector<double> SimEnvironment::getParameters()
 {
-    float magmomFirstorder = 0.0;
-    float magmomSecondorder = 0.0;
-    float magmomFourthorder = 0.0;
+    double magmomFirstorder = 0.0;
+    double magmomSecondorder = 0.0;
+    double magmomFourthorder = 0.0;
 
-    float rawMagmomXDir = 0.0;
-    float rawMagmomYDir = 0.0;
-    float rawMagmomZDir = 0.0;
+    double rawMagmomXDir = 0.0;
+    double rawMagmomYDir = 0.0;
+    double rawMagmomZDir = 0.0;
 
     for (float value : m_meanmagmomsHistory)
     {
-        magmomFirstorder += value;
-        magmomSecondorder += value * value;
-        magmomFourthorder += value * value * value * value;
+        double tempVal = value;
+
+        magmomFirstorder += tempVal;
+        magmomSecondorder += tempVal * tempVal;
+        magmomFourthorder += tempVal * tempVal * tempVal * tempVal;
     }
 
     for (const auto& magmomVal : m_meanRawMagmomsHistory)
@@ -784,21 +957,22 @@ std::vector<double> SimEnvironment::getParameters()
     magmomSecondorder /= historySize;
     magmomFourthorder /= historySize;
 
-    float energyFirstorder = 0.0;
-    float energySecondorder = 0.0;
+    double energyFirstorder = 0.0;
+    double energySecondorder = 0.0;
     for (float value : m_energyHistory)
     {
-        energyFirstorder += value / m_atomnum;
-        energySecondorder += value * value / (m_atomnum * m_atomnum);
+        double tempVal = value;
+        energyFirstorder += tempVal / m_atomnum;
+        energySecondorder += tempVal * tempVal / (m_atomnum * m_atomnum);
     }
     energyFirstorder /= m_energyHistory.size();
     energySecondorder /= m_energyHistory.size();    
 
-    float MagMom = magmomFirstorder;
-    float Chi = m_atomnum / (m_kB * m_temperature) * (magmomSecondorder - magmomFirstorder * magmomFirstorder);
-    float U4 = 1 - magmomFourthorder / (3 * magmomSecondorder * magmomSecondorder);
-    float E = energyFirstorder;
-    float HeatCapacity = m_atomnum * m_atomnum / (m_kB * m_temperature * m_temperature) * (energySecondorder - energyFirstorder * energyFirstorder);
+    double MagMom = magmomFirstorder;
+    double Chi = m_atomnum / (m_kB * m_temperature) * (magmomSecondorder - magmomFirstorder * magmomFirstorder);
+    double U4 = 1 - magmomFourthorder / (3 * magmomSecondorder * magmomSecondorder);
+    double E = energyFirstorder;
+    double HeatCapacity = m_atomnum * m_atomnum / (m_kB * m_temperature * m_temperature) * (energySecondorder - energyFirstorder * energyFirstorder);
 
     m_tlog << getCurrentTime().time_string << " [SimEnvironment] Parameters are:" << std::endl;
     m_tlog << getCurrentTime().time_string << " [SimEnvironment] Temperature: " << m_temperature << std::endl;
@@ -817,7 +991,7 @@ std::vector<double> SimEnvironment::getParameters()
     return returnVals;
 }
 
-void SimEnvironment::writeMagneticMomentsToFile(std::string path)
+void SimEnvironment::writeMagneticMomentsToFile(const std::string& path)
 {
     // Open the output file
     std::ostringstream KString;
@@ -872,7 +1046,7 @@ void SimEnvironment::writeMagneticMomentsToFile(std::string path)
     outFile.close();
 }
 
-void SimEnvironment::readMagneticMomentsFromFile(std::string path)
+void SimEnvironment::readMagneticMomentsFromFile(const std::string& path)
 {
     MomentReader reader(path);
 
