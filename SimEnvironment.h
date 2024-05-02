@@ -87,6 +87,7 @@ public:
 
     void setMagneticField(float xH, float yH, float zH);
     void setSingleIonAnisotropy(float xC, float yC, float zC);
+    Vec3 getSingeIonAnisotropy();
     void setCompassAnisotropy(float xComp, float yComp, float zComp);
     void setOutputPath(std::string out);
     void setMagPattern(std::vector<double> mag_pattern);
@@ -161,6 +162,6 @@ private:
 	std::mt19937 gen;
 	
     int m_statusSteps = 1000;
-    int m_gridSteps = 10;
+    int m_gridSteps = 100;
     int m_workerCount = 1;
 };

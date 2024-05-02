@@ -103,11 +103,11 @@ void SimRunner::SETMAGFIELD(double HVal, XYZ dir)
 void SimRunner::SETEASYPLANE(double CVal, XYZ dir)
 {
 	std::string dirString = "";
-
+	Vec3 singleIonAniso = simEnv->getSingeIonAnisotropy();
 	switch (dir) {
-	case XYZ::X: simEnv->setSingleIonAnisotropy(CVal, 0.0, 0.0); dirString = "X"; break;
-	case XYZ::Y: simEnv->setSingleIonAnisotropy(0.0, CVal, 0.0); dirString = "Y"; break;
-	case XYZ::Z: simEnv->setSingleIonAnisotropy(0.0, 0.0, CVal); dirString = "Z"; break;
+	case XYZ::X: simEnv->setSingleIonAnisotropy(CVal, singleIonAniso[1], singleIonAniso[2]); dirString = "X"; break;
+	case XYZ::Y: simEnv->setSingleIonAnisotropy(singleIonAniso[0], CVal, singleIonAniso[2]); dirString = "Y"; break;
+	case XYZ::Z: simEnv->setSingleIonAnisotropy(singleIonAniso[0], singleIonAniso[1], CVal); dirString = "Z"; break;
 	default: throw std::runtime_error("Invalid direction for the easy plane anisotropy: ONLY X, Y, Z directions allowed");
 	}
 

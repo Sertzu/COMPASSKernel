@@ -4,6 +4,12 @@
 
 namespace fs = std::filesystem;
 
+int wrapIndex(int index, int max){
+    index %= max;
+    if (index < 0) index += max;
+    return index;
+}
+
 inline void dotProduct(float& sum, const Vec3& vec1, const Vec3& vec2) {
     sum = vec1[0] * vec2[0] + vec1[1] * vec2[1] + vec1[2] * vec2[2];
 }
@@ -537,18 +543,15 @@ void SimEnvironment::setMagneticField(float xH, float yH, float zH)
 
 void SimEnvironment::setSingleIonAnisotropy(float xC, float yC, float zC)
 {
-    if (abs(xC) > 0.00001)
-        m_singleIonDir = 0;
-    else if (abs(yC) > 0.00001)
-        m_singleIonDir = 1;
-    else if (abs(zC) > 0.00001)
-        m_singleIonDir = 2;
-    else
-        m_singleIonDir = -1;
-
     m_singleIonAnisotropyTerm[0] = xC;
     m_singleIonAnisotropyTerm[1] = yC;
     m_singleIonAnisotropyTerm[2] = zC;
+}
+
+Vec3 SimEnvironment::getSingeIonAnisotropy()
+{
+    Vec3 retVal = {{ m_singleIonAnisotropyTerm[0], m_singleIonAnisotropyTerm[1], m_singleIonAnisotropyTerm[2] }};
+    return retVal;
 }
 
 void SimEnvironment::setCompassAnisotropy(float xComp, float yComp, float zComp)
@@ -804,9 +807,14 @@ std::vector<IndivdualParameters> SimEnvironment::getIndivdualParameters()
 std::array<std::vector<float>, 3> SimEnvironment::calculateCorrelationFunction(int atomType)
 {
 
-    std::vector<float> correlationX(m_gridSize[0] + 1);
-    std::vector<float> correlationY(m_gridSize[1] + 1);
-    std::vector<float> correlationZ(m_gridSize[2] + 1);
+    std::vector<float> correlationX(m_gridSize[0] + 1, 0.f);
+    std::vector<float> correlationY(m_gridSize[1] + 1, 0.f);
+    std::vector<float> correlationZ(m_gridSize[2] + 1, 0.f);
+
+    // For debugging
+    std::vector<int> correlationXCounter(m_gridSize[0] + 1, 0);
+    std::vector<int> correlationYCounter(m_gridSize[1] + 1, 0);
+    std::vector<int> correlationZCounter(m_gridSize[2] + 1, 0);
 
     int histSize = m_gridHistory[atomType - 1].size();
 
@@ -821,33 +829,38 @@ std::array<std::vector<float>, 3> SimEnvironment::calculateCorrelationFunction(i
                     {
                         PointXYZ spinR = gridPtr->getPoint(j, y, z);
                         correlationX[abs(x - j)] += dotProduct(spinL, spinR);
+                        correlationXCounter[abs(x - j)] += 1;
                     }
                     for (int j = 0; j <= m_gridSize[1]; j++)
                     {
                         PointXYZ spinR = gridPtr->getPoint(x, j, z);
                         correlationY[abs(y - j)] += dotProduct(spinL, spinR);
+                        correlationYCounter[abs(y - j)] += 1;
                     }
                     for (int j = 0; j <= m_gridSize[2]; j++)
                     {
                         PointXYZ spinR = gridPtr->getPoint(x, y, j);
                         correlationZ[abs(z - j)] += dotProduct(spinL, spinR);
+                        correlationZCounter[abs(z - j)] += 1;
                     }
                 }
-
-    float normFactor = 2 * (m_gridSize[0] + 1) * (m_gridSize[1] + 1) * (m_gridSize[2] + 1) * histSize;
-
-    for (auto& value : correlationX)
+    
+    for (int i = 0; i < correlationX.size(); i++)
     {
-        value /= normFactor;
+        if (correlationXCounter[i] == 0) continue;
+        correlationX[i] /= correlationXCounter[i];
     }
-    for (auto& value : correlationY)
+    for (int i = 0; i < correlationY.size(); i++)
     {
-        value /= normFactor;
+        if (correlationYCounter[i] == 0) continue;
+        correlationY[i] /= correlationYCounter[i];
     }
-    for (auto& value : correlationZ)
+    for (int i = 0; i < correlationZ.size(); i++)
     {
-        value /= normFactor;
+        if (correlationZCounter[i] == 0) continue;
+        correlationZ[i] /= correlationZCounter[i];
     }
+    
     std::array<std::vector<float>, 3> tempArray;
     tempArray[0] = correlationX;
     tempArray[1] = correlationY;

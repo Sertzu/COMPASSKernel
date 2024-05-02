@@ -18,33 +18,11 @@
 int main(int argc, char* argv[])
 {
     ScriptHandler scriptExecutor("inputs/SETTINGS.cfg");
-    scriptExecutor.loadScript("inputs/ScriptEuRh2Si2.comps");
+    //scriptExecutor.loadScript("inputs/ScriptEuRh2Si2.comps");
+    scriptExecutor.loadScript("FeTeInputs/ScriptFeTe.comps");
     //scriptExecutor.loadScript("inputs/ScriptSFMO.comps");
     //scriptExecutor.loadScript("inputs/ScriptGdRu2Si2.comps");
     scriptExecutor.showScript();
     scriptExecutor.runScript();
-
-
-    exit(0);
-    SimRunner simRunner("inputs/SETTINGS.cfg");
-    
-    int stepsInit = 40000;
-    int steps = 1000;
-    // RUNNER TESTING
-    simRunner.LOAD("inputs/GdMn6Sn6_b20_c0.1_mJValue.dat");
-    simRunner.SETOUT("results/GdMn6Sn6_b20_c0.1_mJValue.dat");
-    simRunner.SETTEMP(1000.);
-    simRunner.SETMAGFIELD(0.1, XYZ::Y);
-
-    simRunner.APPROACHTEMP(1., stepsInit);
-    simRunner.EQUILIB(stepsInit);
-    simRunner.MEASUREMENT(stepsInit);
-
-    simRunner.SWEEPMAG(100., 10., steps, steps, steps);
-    simRunner.SWEEPMAG(-100., -10., steps, steps, steps);
-    simRunner.SWEEPMAG(100., 10., steps, steps, steps);
-
-    //simRunner.SWEEPTEMP(250., 5., 20000, 20000, 20000);
-    
     return 0;
 }
