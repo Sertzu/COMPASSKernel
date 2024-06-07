@@ -17,7 +17,7 @@
 // -e 2000 -m 2000 -t 50 -o C:\Users\Sertzu\source\repos\COMPASSKernel\COMPASSKernel\results -i C:\Users\Sertzu\source\repos\COMPASSKernel\COMPASSKernel\inputs\Jij_my_test.dat
 int main(int argc, char* argv[])
 {
-    ScriptHandler scriptExecutor("inputs/SETTINGS.cfg");
+    ScriptHandler scriptExecutor;
     //scriptExecutor.loadScript("inputs/ScriptEuRh2Si2.comps");
     scriptExecutor.loadScript("GdCo2Si2Inputs/ScriptGdCo2Si2.comps");
     //scriptExecutor.loadScript("inputs/ScriptSFMO.comps");

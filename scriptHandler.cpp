@@ -73,7 +73,7 @@ std::vector<std::vector<std::string>> readScriptFile(const std::string& filename
     return result;
 }
 
-ScriptHandler::ScriptHandler(const std::string settingsPath) : simRunner_(settingsPath)
+ScriptHandler::ScriptHandler()
 {
     tlogRunner_ = ThreadLogger(0, true);
 }

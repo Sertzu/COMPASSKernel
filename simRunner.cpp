@@ -1,14 +1,15 @@
 #include "simRunner.h"
 #include <format>
 
-SimRunner::SimRunner(const std::string settingsPath) : settings(settingsPath)
+SimRunner::SimRunner()
 {
-	simVars.inputPath = settings.get<std::string>("inputPath");
-	simVars.outputPath = settings.get<std::string>("outputPath");
+	simVars.inputPath = "input/default.dat";
+	simVars.outputPath = "results";
 	simVars.temperature = -1;
 
 	tlogRunner = ThreadLogger(0, true);
 }
+
 
 // WILL OVERWRITE EVERYTHING IN THE ENVIRONMENT
 void SimRunner::LOAD(std::string inputFile)

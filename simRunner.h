@@ -43,7 +43,7 @@ struct SimulationVariables
 class SimRunner
 {
 public:
-	SimRunner(const std::string settingsPath);
+	SimRunner();
 
 	void LOAD(std::string inputFile = "");
 	void SETOUT(std::string outFile = "");
@@ -70,14 +70,11 @@ public:
 
 	void SWEEPMAG(double targetH, double HSteps, int approachSteps, int equilibSteps, int measurementSteps);
 private:
-	SimRunner();
-
 	void print(const std::string toPrint);
 
 	void saveMeasurement(std::vector<double> outVals);
 	void saveIndividualParameters(std::vector<IndivdualParameters> params);
 	std::unique_ptr<SimEnvironment> simEnv;
-	SettingsClass settings;
 	SimulationVariables simVars;
 
 	ThreadLogger tlogRunner;

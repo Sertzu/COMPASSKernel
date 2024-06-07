@@ -36,7 +36,7 @@ std::vector<std::vector<std::string>> readScriptFile(const std::string& filename
 
 class ScriptHandler {
 public:
-    ScriptHandler(const std::string settingsPath);
+    ScriptHandler();
 
     void loadScript(const std::string scriptPath);
 
