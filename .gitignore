@@ -1,61 +1,8 @@
-# Prerequisites
-*.d
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
 
-# Compiled Object files
-*.slo
-*.lo
-*.o
-*.obj
-
-# Precompiled Headers
-*.gch
-*.pch
-
-# Compiled Dynamic libraries
-*.so
-*.dylib
-*.dll
-
-# Fortran module files
-*.mod
-*.smod
-
-# Compiled Static libraries
-*.lai
-*.la
-*.a
-*.lib
-
-# Executables
-*.exe
-*.out
-*.app
-/x64
-/results
-/inputs
-/.vs/COMPASSKernel
-*.user
-*.txt
 /.vs
-/resultsMW
-/resultsMW2
-/SFMOInputs
-/SFMOResults
-/SFMOResultsOld
-/GdRu2Si2Results
-/GdRu2Si2Inputs
-/resultsCrSb
-/EuRh2S2Inputs
-/EuRh2S2Results
-/EuRh2S2Results2
-/EuRh2S2Results3
-/SFMOResults2
-/EuRh2S2Results4
-/FeTeInputs
-/FeTeResults
-/FeTeResults2
-/FeTeResults3
-/FeTeResults4
 /GdCo2Si2Inputs
 /GdCo2Si2Results
-/out/build/x64-debug
+/out/build
