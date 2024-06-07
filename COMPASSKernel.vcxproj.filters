@@ -97,5 +97,8 @@
     <None Include="inputs\ScriptEuRh2Si2.comps">
       <Filter>Ressourcendateien</Filter>
     </None>
+    <None Include="GdCo2Si2Inputs\ScriptGdCo2Si2.comps">
+      <Filter>Ressourcendateien</Filter>
+    </None>
   </ItemGroup>
 </Project>

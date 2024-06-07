@@ -19,7 +19,7 @@ int main(int argc, char* argv[])
 {
     ScriptHandler scriptExecutor("inputs/SETTINGS.cfg");
     //scriptExecutor.loadScript("inputs/ScriptEuRh2Si2.comps");
-    scriptExecutor.loadScript("FeTeInputs/ScriptFeTe.comps");
+    scriptExecutor.loadScript("GdCo2Si2Inputs/ScriptGdCo2Si2.comps");
     //scriptExecutor.loadScript("inputs/ScriptSFMO.comps");
     //scriptExecutor.loadScript("inputs/ScriptGdRu2Si2.comps");
     scriptExecutor.showScript();

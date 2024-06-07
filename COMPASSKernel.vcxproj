@@ -168,6 +168,7 @@
     <ClInclude Include="timeUtility.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="GdCo2Si2Inputs\ScriptGdCo2Si2.comps" />
     <None Include="inputs\ScriptEuRh2Si2.comps" />
     <None Include="inputs\ScriptSFMO.comps" />
     <None Include="inputs\ScriptSrCoO3.comps" />
