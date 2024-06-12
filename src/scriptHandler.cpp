@@ -35,6 +35,7 @@ ScriptOption stringToOptionEnum(const std::string& str) {
         {"SETWORKERCOUNT", ScriptOption::SETWORKERCOUNT}
     };
 
+    std::cout << str.size() << std::endl;
     auto it = strToEnumMap.find(str);
     if (it != strToEnumMap.end()) {
         return it->second;
