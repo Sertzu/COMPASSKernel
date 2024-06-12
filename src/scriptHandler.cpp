@@ -47,7 +47,7 @@ ScriptOption stringToOptionEnum(const std::string& str) {
 std::vector<std::vector<std::string>> readScriptFile(const std::string& filename) {
     std::ifstream file(filename);
     if (!file.is_open()) {
-        std::cerr << "Failed to open file : " + filename << std::endl;
+        std::cout << "Failed to open file : " + filename << std::endl;
         throw std::runtime_error("Failed to open file : " + filename);
     }
 
@@ -81,6 +81,7 @@ ScriptHandler::ScriptHandler()
 
 void ScriptHandler::loadScript(const std::string scriptPath)
 {
+    std::cout << "Trying to load the script." << std::endl;
     auto tempScript = readScriptFile(scriptPath);
     validcheck_ = true;
     std::string invalidScriptCommand;
