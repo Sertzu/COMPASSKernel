@@ -1,5 +1,33 @@
 #include "SettingsClass.h"
 
+// Explicit specialization of the get method for std::string type
+template<>
+std::string SettingsClass::get<std::string>(const std::string& key) {
+    return settings.at(key);
+}
+
+// Explicit specialization of the get method for int type
+template<>
+int SettingsClass::get<int>(const std::string& key) {
+    try {
+        return std::stoi(settings.at(key));
+    }
+    catch (...) {
+        throw std::runtime_error("Cannot convert setting to int: " + key);
+    }
+}
+
+// Explicit specialization of the get method for double type
+template<>
+double SettingsClass::get<double>(const std::string& key) {
+    try {
+        return std::stod(settings.at(key));
+    }
+    catch (...) {
+        throw std::runtime_error("Cannot convert setting to double: " + key);
+    }
+}
+
 SettingsClass::SettingsClass(std::string settingsFile)
 {
     settings = readSettingsFile(settingsFile);
