@@ -54,8 +54,10 @@ std::vector<std::vector<std::string>> readScriptFile(const std::string& filename
     std::vector<std::vector<std::string>> result;
     std::string line;
     while (getline(file, line)) {
+        std::cout << "loop" << std::endl;
         // Skip lines that are empty or start with '#' or '!'
         if (line.empty() || line[0] == '#' || line[0] == '!') {
+            std::cout << "line skipped" << std::endl;
             continue;
         }
 
@@ -70,6 +72,7 @@ std::vector<std::vector<std::string>> readScriptFile(const std::string& filename
         result.push_back(tokens);
     }
 
+    std::cout << "Parsed file: " + filename << std::endl;
     file.close();
     return result;
 }
