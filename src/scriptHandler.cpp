@@ -40,6 +40,7 @@ ScriptOption stringToOptionEnum(const std::string& str) {
     std::cout << "Does this work?" << std::endl;
 
     if (it != strToEnumMap.end()) {
+        std::cout << "Does this work??" << std::endl;
         return it->second;
     }
     else {
