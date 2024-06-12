@@ -27,7 +27,7 @@ int main(int argc, char* argv[])
     try {
         program.parse_args(argc, argv);
 
-        std::string path = program.get<std::string>("Script Path");
+        path = program.get<std::string>("Script Path");
 
         std::cout << "Provided script path: " << path << std::endl;
     }
@@ -39,7 +39,7 @@ int main(int argc, char* argv[])
 
     ScriptHandler scriptExecutor;
 
-    scriptExecutor.loadScript("GdCo2Si2Inputs/ScriptGdCo2Si2.comps");
+    scriptExecutor.loadScript(path);
     scriptExecutor.showScript();
     scriptExecutor.runScript();
 
