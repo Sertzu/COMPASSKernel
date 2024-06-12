@@ -54,10 +54,8 @@ std::vector<std::vector<std::string>> readScriptFile(const std::string& filename
     std::vector<std::vector<std::string>> result;
     std::string line;
     while (getline(file, line)) {
-        std::cout << "loop" << std::endl;
         // Skip lines that are empty or start with '#' or '!'
         if (line.empty() || line[0] == '#' || line[0] == '!') {
-            std::cout << "line skipped" << std::endl;
             continue;
         }
 
@@ -88,6 +86,8 @@ void ScriptHandler::loadScript(const std::string scriptPath)
     auto tempScript = readScriptFile(scriptPath);
     validcheck_ = true;
     std::string invalidScriptCommand;
+
+    print("CHECKING SCRIPT FROM " + scriptPath + "\n");
 
     for (const auto& element : tempScript)
     {
