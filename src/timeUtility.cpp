@@ -7,7 +7,12 @@ DateTimeInfo getCurrentTime() {
     std::time_t unix_time = std::chrono::system_clock::to_time_t(now);
     // Convert the time_t object to a tm struct representing a date object
     std::tm date_object;
+
+#ifdef _WIN32
     localtime_s(&date_object, &unix_time);
+#else
+    localtime_r(&date_object, &unix_time);
+#endif
 
     // Create a DateTimeInfo object and set the date_object and unix_time fields
     DateTimeInfo dt_info;
