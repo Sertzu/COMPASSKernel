@@ -36,11 +36,7 @@ ScriptOption stringToOptionEnum(const std::string& str) {
     };
 
     auto it = strToEnumMap.find(str);
-
-    std::cout << "Does this work?" << std::endl;
-
     if (it != strToEnumMap.end()) {
-        std::cout << "Does this work??" << std::endl;
         return it->second;
     }
     else {
@@ -98,6 +94,7 @@ void ScriptHandler::loadScript(const std::string scriptPath)
         print("Command: " + element[0]);
         if (stringToOptionEnum(element[0]) == ScriptOption::INVALID)
         {
+            std::cout << "Hello??" << std::endl;
             validcheck_ = false;
             invalidScriptCommand = element[0];
             break;
