@@ -47,10 +47,10 @@ ScriptOption stringToOptionEnum(const std::string& str) {
 std::vector<std::vector<std::string>> readScriptFile(const std::string& filename) {
     std::ifstream file(filename);
     if (!file.is_open()) {
-        std::cout << "Failed to open file : " + filename << std::endl;
+        std::cout << "Failed to open file: " + filename << std::endl;
         throw std::runtime_error("Failed to open file : " + filename);
     }
-
+    std::cout << "Opened file: " + filename + " -> parsing..." << std::endl;
     std::vector<std::vector<std::string>> result;
     std::string line;
     while (getline(file, line)) {
