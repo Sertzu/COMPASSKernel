@@ -11,7 +11,7 @@ DateTimeInfo getCurrentTime() {
 #ifdef _WIN32
     localtime_s(&date_object, &unix_time);
 #else
-    localtime_r(&date_object, &unix_time);
+    localtime_r(&unix_time, &date_object);
 #endif
 
     // Create a DateTimeInfo object and set the date_object and unix_time fields
