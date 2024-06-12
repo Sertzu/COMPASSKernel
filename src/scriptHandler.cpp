@@ -92,10 +92,10 @@ void ScriptHandler::loadScript(const std::string scriptPath)
 
     for (const auto& element : tempScript)
     {
+        print("Element Size: " + element.size());
         print("Command: " + element[0]);
         if (stringToOptionEnum(element[0]) == ScriptOption::INVALID)
         {
-            std::cout << "Hello??" << std::endl;
             validcheck_ = false;
             invalidScriptCommand = element[0];
             break;
