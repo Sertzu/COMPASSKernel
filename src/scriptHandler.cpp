@@ -34,8 +34,11 @@ ScriptOption stringToOptionEnum(const std::string& str) {
         {"SETMAGPATTERN", ScriptOption::SETMAGPATTERN},
         {"SETWORKERCOUNT", ScriptOption::SETWORKERCOUNT}
     };
-    std::cout << "Trying to find option!" << std::endl;
+
     auto it = strToEnumMap.find(str);
+
+    std::cout << "Does this work?" << std::endl;
+
     if (it != strToEnumMap.end()) {
         return it->second;
     }
