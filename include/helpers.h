@@ -7,6 +7,8 @@
 #include <filesystem>
 #include <iomanip>
 #include <sstream>
+#include <cmath>
+#include <algorithm>
 #include <map>
 
 
