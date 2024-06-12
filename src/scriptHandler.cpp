@@ -91,6 +91,7 @@ void ScriptHandler::loadScript(const std::string scriptPath)
 
     for (const auto& element : tempScript)
     {
+        print("Command: " + element[0]);
         if (stringToOptionEnum(element[0]) == ScriptOption::INVALID)
         {
             validcheck_ = false;
