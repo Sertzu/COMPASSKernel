@@ -1,0 +1,8 @@
+{
+    "cmake.debugConfig": {
+        "args": [
+            "GdCo2Si2Inputs/ScriptGdCo2Si2.comps"
+        ],
+        "cwd": "${workspaceFolder}"
+    }
+}
