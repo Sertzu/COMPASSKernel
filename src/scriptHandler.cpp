@@ -87,12 +87,12 @@ void ScriptHandler::loadScript(const std::string scriptPath)
     auto tempScript = readScriptFile(scriptPath);
     validcheck_ = true;
     std::string invalidScriptCommand;
+    std::cout << tempScript.size() << std::endl;
+    print("CHECKING SCRIPT FROM " + scriptPath);
 
-    print("CHECKING SCRIPT FROM " + scriptPath + "\n");
-
-    for (const auto& element : tempScript)
+    for (auto& element : tempScript)
     {
-        print("Element Size: " + element.size());
+        std::cout << element[0] << std::endl;
         print("Command: " + element[0]);
         if (stringToOptionEnum(element[0]) == ScriptOption::INVALID)
         {
@@ -352,7 +352,7 @@ void ScriptHandler::runScript()
 
 }
 
-void ScriptHandler::print(const std::string toPrint)
+void ScriptHandler::print(const std::string& toPrint)
 {
     auto time = getCurrentTime().time_string;
     auto msg = toPrint;

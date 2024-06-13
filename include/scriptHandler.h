@@ -52,7 +52,7 @@ private:
     int currentPos_ = 0;
     bool validcheck_ = false;
 
-    void print(const std::string toPrint);
+    void print(const std::string& toPrint);
 
     std::vector<std::vector<std::string>> script_;
 };
