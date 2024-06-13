@@ -87,6 +87,7 @@ void ScriptHandler::loadScript(const std::string scriptPath)
     auto tempScript = readScriptFile(scriptPath);
     validcheck_ = true;
     std::string invalidScriptCommand;
+    std::string command;
     std::cout << tempScript.size() << std::endl;
     print("CHECKING SCRIPT FROM " + scriptPath);
 
@@ -94,6 +95,7 @@ void ScriptHandler::loadScript(const std::string scriptPath)
     {
         std::cout << element[0] << std::endl;
         print("Command: " + element[0]);
+        command = element[0];
         if (stringToOptionEnum(element[0]) == ScriptOption::INVALID)
         {
             validcheck_ = false;
