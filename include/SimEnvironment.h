@@ -107,7 +107,7 @@ private:
 
     float energy_diff_calculator(const int& index,const Vec3& oldMom,const Vec3& newMom, const std::vector<Vec3>& magmoms, const std::vector<std::vector<std::tuple<int, float>>>& atomlinks);
     float rate_calculator(int& index,float& beta, Vec3& oldMom, Vec3& newMom, const std::vector<Vec3>& magmoms, const std::vector<std::vector<std::tuple<int, float>>>& atomlinks);
-    float energy_calculator(std::array<float, 20>& individualEnergy);
+    double energy_calculator(std::array<double, 20>& individualEnergy);
     Vec3 generateRandomVecSingle();
 
     void generateAcceptanceVec(std::vector<float>& vecIn);
@@ -133,10 +133,10 @@ private:
     std::vector<std::vector<Vec3>> m_magmomsHistory;
 	std::vector<float> m_meanmagmomsHistory;
     std::vector<Vec3> m_meanRawMagmomsHistory;
-	std::vector<float> m_energyHistory;
+	std::vector<double> m_energyHistory;
 
     std::vector<std::array<float, 20>> m_individualMeanmagmomsHistory;
-    std::vector<std::array<float, 20>> m_individualEnergyHistory;
+    std::vector<std::array<double, 20>> m_individualEnergyHistory;
 
 	std::string m_inputPath;
 	std::string m_outputPath;

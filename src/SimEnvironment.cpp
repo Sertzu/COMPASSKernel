@@ -14,6 +14,10 @@ inline void dotProduct(float& sum, const Vec3& vec1, const Vec3& vec2) {
     sum = vec1[0] * vec2[0] + vec1[1] * vec2[1] + vec1[2] * vec2[2];
 }
 
+inline void dotProduct(double& sum, const Vec3& vec1, const Vec3& vec2) {
+    sum = vec1[0] * vec2[0] + vec1[1] * vec2[1] + vec1[2] * vec2[2];
+}
+
 inline float dotProduct(const PointXYZ& vec1, const PointXYZ& vec2) {
     return vec1.x * vec2.x + vec1.y * vec2.y + vec1.z * vec2.z;
 }
@@ -266,7 +270,7 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approachTemp, floa
     std::vector<Vec3> randomNumberVector3DSwap(m_atomnum, { 0.0 ,0.0 , 0.0 });
     std::vector<float> acceptanceVectorSwap(m_atomnum, 0.0);
 
-    std::array<float, 20> individualEnergy;
+    std::array<double, 20> individualEnergy;
     std::array<float, 20> individualMeanmagmoms;
 
     BS::thread_pool pool;
@@ -284,7 +288,7 @@ void SimEnvironment::runSim(int steps, bool measurement, bool approachTemp, floa
 
     m_energyHistory.resize(steps);
     m_individualEnergyHistory.resize(steps);
-    std::future<float> energy;
+    std::future<double> energy;
 
     std::vector<std::vector<Vec3>> magmomCopy;
     for (int i = 0; i < m_workerCount; i++)
@@ -649,7 +653,7 @@ float SimEnvironment::rate_calculator(int& index, float& beta, Vec3& oldMom, Vec
     return std::exp(-energy_diff_calculator(index, oldMom, newMom, magmoms, atomlinks) * beta);
 }
 
-float SimEnvironment::energy_calculator(std::array<float, 20>& individualEnergy)
+double SimEnvironment::energy_calculator(std::array<double, 20>& individualEnergy)
 {
     static BS::thread_pool calcpool(m_workerCount);
     static std::mutex energyLock;
@@ -657,11 +661,11 @@ float SimEnvironment::energy_calculator(std::array<float, 20>& individualEnergy)
     calcpool.push_loop(m_atomnum,
         [&](const int a, const int b)
         {
-            std::array<float, 20> individualEnergyT;
-            individualEnergyT.fill(0.f);
+            std::array<double, 20> individualEnergyT;
+            individualEnergyT.fill(0.);
 
             int link;
-            float param, sum;
+            double param, sum;
             for (int i = a; i < b; i++)
             {
 
@@ -696,7 +700,7 @@ float SimEnvironment::energy_calculator(std::array<float, 20>& individualEnergy)
 
     calcpool.wait_for_tasks();
 
-    float energy = 0.0;
+    double energy = 0.0;
     for (const auto& type : m_uniqueAtomTypes)
         energy += individualEnergy[type];
     return energy;
@@ -972,11 +976,10 @@ std::vector<double> SimEnvironment::getParameters()
 
     double energyFirstorder = 0.0;
     double energySecondorder = 0.0;
-    for (float value : m_energyHistory)
+    for (double value : m_energyHistory)
     {
-        double tempVal = value;
-        energyFirstorder += tempVal / m_atomnum;
-        energySecondorder += tempVal * tempVal / (m_atomnum * m_atomnum);
+        energyFirstorder += value / m_atomnum;
+        energySecondorder += value * value / (m_atomnum * m_atomnum);
     }
     energyFirstorder /= m_energyHistory.size();
     energySecondorder /= m_energyHistory.size();    
