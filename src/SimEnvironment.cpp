@@ -157,7 +157,9 @@ SimEnvironment::SimEnvironment(std::string input, std::string output, float temp
     m_atomGridPos.resize(m_atomnum);
     m_atomTypes.resize(m_atomnum);
     m_atomNames.resize(m_atomnum);
-
+    m_magDir = 0;
+    m_singleIonDir = 0;
+    m_compassDir = 0;
     m_individualAtomnum.fill(0);
 
     auto coords = std::get<8>(values);
@@ -167,8 +169,13 @@ SimEnvironment::SimEnvironment(std::string input, std::string output, float temp
         extractLinksAndCoordinates(lines[i], values);
         auto gridPos = std::get<9>(values);
 
-        for(int j = 0; j < 2; j++)
-            if (gridPos[j] > m_gridSize[j]) m_gridSize[j] = gridPos[j];
+        for (int j = 0; j < 3; j++)
+        {
+            if (gridPos[j] > m_gridSize[j])
+            {
+                m_gridSize[j] = gridPos[j];
+            }
+        }
 
         coords = std::get<8>(values);
         m_links[std::get<0>(values) - 1].push_back(std::make_tuple(std::get<1>(values) - 1, std::get<2>(values)));
